@@ -1,0 +1,85 @@
+syntax="proto3";
+
+package distroboy;
+
+option java_package = "distroboy.schemas";
+option java_multiple_files = true;
+
+import 'google/protobuf/any.proto';
+import 'google/protobuf/empty.proto';
+
+message MemberEvent {
+  oneof member_event_oneof {
+    JoinCluster join_cluster = 1;
+  }
+}
+
+message CoordinatorEvent {
+  oneof coordinator_event_oneof {
+    ClusterMembers cluster_members = 1;
+  }
+}
+
+message JoinCluster {
+  string cluster_name = 1;
+  uint32 member_port = 2;
+  uint32 expected_members = 3;
+}
+
+message HostAndPort {
+  string host = 1;
+  uint32 port = 2;
+}
+
+message ClusterMembers {
+  bool is_leader = 1;
+  HostAndPort leader_address = 2;
+  repeated HostAndPort cluster_members = 3;
+}
+
+service Coordinator {
+  rpc connect(stream MemberEvent) returns (stream CoordinatorEvent);
+  rpc joinCluster(JoinCluster) returns (ClusterMembers);
+}
+
+message DataSourceRange {
+  uint64 start_inclusive = 1;
+  uint64 end_exclusive = 2;
+}
+
+message Value {
+  oneof value_oneof {
+    int32 int_value = 1;
+    int64 long_value = 2;
+    string string_value = 3;
+    bytes bytes_value = 4;
+    google.protobuf.Any any_value = 5;
+  }
+}
+
+service ClusterMember {
+  rpc identify(google.protobuf.Empty) returns (ClusterMemberIdentity);
+  rpc process(DataSourceRange) returns (stream Value);
+  rpc distribute(DataReferences) returns (google.protobuf.Empty);
+  rpc retrieveRange(DataReferenceRange) returns (stream Value);
+  rpc disband(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message ClusterMemberIdentity {
+  bytes node_id = 1;
+}
+
+message DataReference {
+  bytes member_id = 1;
+  bytes reference_id = 2;
+  uint64 count = 3;
+}
+
+message DataReferenceRange {
+  DataReference reference = 1;
+  DataSourceRange range = 2;
+}
+
+message DataReferences {
+  repeated DataReference references = 1;
+}

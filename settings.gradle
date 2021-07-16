@@ -1,0 +1,6 @@
+rootProject.name = 'DistroBoy'
+include 'coordinator'
+include 'core'
+include 'example'
+include 'schemas'
+
