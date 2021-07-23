@@ -1,16 +1,18 @@
 package distroboy.core.clustering;
 
+import static java.util.Objects.isNull;
+
 import distroboy.schemas.ClusterMembers;
 import distroboy.schemas.CoordinatorEvent;
 import distroboy.schemas.CoordinatorGrpc;
 import distroboy.schemas.HostAndPort;
 import distroboy.schemas.JoinCluster;
 import distroboy.schemas.MemberEvent;
+import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
-import java.io.SyncFailedException;
 import java.util.HashMap;
-import java.util.InputMismatchException;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +73,7 @@ public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase 
     public void abort() {
       for (final var member : members.entrySet()) {
         final var observer = member.getValue();
-        observer.onError(
-            new SyncFailedException("Some cluster members disconnected before the lobby was full"));
+        observer.onError(Status.ABORTED.asException());
       }
     }
   }
@@ -96,18 +97,23 @@ public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase 
               clusterName ->
                   new ClusterLobby(request.getClusterName(), request.getExpectedMembers()));
       if (lobby.expectedMembers != request.getExpectedMembers()) {
-        throw new InputMismatchException(
-            "The lobby for "
-                + request.getClusterName()
-                + " expects "
-                + lobby.expectedMembers
-                + " members, not "
-                + request.getExpectedMembers());
+        log.error(
+            "The lobby for {} expected {} members, not {}",
+            request.getClusterName(),
+            lobby.expectedMembers,
+            request.getExpectedMembers());
+        throw Status.INVALID_ARGUMENT.asException();
+      }
+
+      final var remoteAddressOfCurrentRequest =
+          remoteAddressProvider.getRemoteAddressOfCurrentRequest();
+      if (isNull(remoteAddressOfCurrentRequest)) {
+        log.warn("Couldn't detect remote address... instructing member to retry");
+        throw Status.UNAVAILABLE.asException();
       }
 
       final var observedMemberDetails =
-          buildHostAndPort(
-              remoteAddressProvider.getRemoteAddressOfCurrentRequest(), request.getMemberPort());
+          buildHostAndPort(remoteAddressOfCurrentRequest, request.getMemberPort());
       lobby.add(observedMemberDetails, serverCallStreamObserver);
 
       serverCallStreamObserver.setOnCancelHandler(
@@ -115,14 +121,14 @@ public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase 
             log.error(
                 "{} - Some cluster members disconnected before the lobby was full",
                 request.getClusterName());
-            lobby.abort();
             clusterLobbies.remove(request.getClusterName());
+            lobby.abort();
           });
 
       if (lobby.tryStartCluster()) {
         clusterLobbies.remove(request.getClusterName());
       }
-    } catch (InputMismatchException e) {
+    } catch (StatusException e) {
       log.error("joinCluster request failed - ", e);
       responseObserver.onError(e);
     }
