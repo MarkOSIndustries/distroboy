@@ -168,12 +168,7 @@ public final class Cluster implements AutoCloseable {
         .groupBy(classifier::apply);
   }
 
-  public <I, O, C> DistributedOpResult<C> collect(DistributedOpSequence<I, O, C> opSequence)
-      throws Exception {
-    return execute(opSequence);
-  }
-
-  private <I, O, C> DistributedOpResult<C> execute(DistributedOpSequence<I, O, C> opSequence) {
+  public <I, O, C> DistributedOpResult<C> execute(DistributedOpSequence<I, O, C> opSequence) {
     clusterMember.addJob(
         dataSourceRange -> {
           final var iterator = opSequence.getOperand().enumerateRangeForNode(dataSourceRange);

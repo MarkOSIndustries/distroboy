@@ -24,7 +24,7 @@ public class Main {
 
       // Filtering and counting the lines in some files
       cluster
-          .collect(
+          .execute(
               DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
@@ -36,7 +36,7 @@ public class Main {
 
       // Filtering and collecting the lines in some files
       cluster
-          .collect(
+          .execute(
               DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
@@ -59,14 +59,14 @@ public class Main {
       // Using persisted results in a new distributed operation - distributing evenly across the
       // cluster
       cluster
-          .collect(
+          .execute(
               cluster.redistributeEqually(heapPersistedLines, Serialisers.stringValues).count())
           .onClusterLeader(
               count -> log.info("Lines beginning with 'yay' via heap persistence: {}", count));
 
       // Using persisted results in a groupBy
       cluster
-          .collect(
+          .execute(
               cluster
                   .redistributeAndGroupBy(
                       heapPersistedLines,
