@@ -23,8 +23,8 @@ public class PersistToHeap<I> implements Operation<I, DataReference, List<DataRe
 
     final UUID referenceId = UUID.randomUUID();
 
-    PersistedData.storedReferences.put(
-        referenceId, () -> new MappingIterator<>(asList.iterator(), serialiser::serialise));
+    PersistedData.STORED_REFERENCES.put(
+        referenceId, new PersistedData<>(asList::iterator, serialiser));
 
     return List.of(
             DataReference.newBuilder()

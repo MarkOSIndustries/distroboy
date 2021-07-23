@@ -4,6 +4,7 @@ import com.google.protobuf.Empty;
 import distroboy.schemas.ClusterMemberGrpc;
 import distroboy.schemas.ClusterMemberIdentity;
 import distroboy.schemas.DataReference;
+import distroboy.schemas.DataReferenceHashSpec;
 import distroboy.schemas.DataReferenceRange;
 import distroboy.schemas.DataReferences;
 import distroboy.schemas.DataSourceRange;
@@ -45,6 +46,10 @@ public class ConnectionToClusterMember {
 
   public Iterator<Value> retrieveRange(DataReferenceRange dataReferenceRange) {
     return member.retrieveRange(dataReferenceRange);
+  }
+
+  public Iterator<Value> retrieveByHash(DataReferenceHashSpec dataReferenceHashSpec) {
+    return member.retrieveByHash(dataReferenceHashSpec);
   }
 
   public HostAndPort getHostAndPort() {

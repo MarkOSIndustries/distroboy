@@ -2,7 +2,7 @@ package distroboy.core;
 
 import distroboy.core.operations.LongReduceOp;
 
-public class Total implements LongReduceOp<Long> {
+public class Sum implements LongReduceOp<Long> {
   @Override
   public Long reduceInput(Long aggregate, Long input) {
     return aggregate + input;

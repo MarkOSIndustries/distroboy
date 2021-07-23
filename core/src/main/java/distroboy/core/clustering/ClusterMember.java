@@ -11,6 +11,7 @@ import distroboy.schemas.ClusterMemberGrpc;
 import distroboy.schemas.ClusterMemberIdentity;
 import distroboy.schemas.ClusterMembers;
 import distroboy.schemas.DataReference;
+import distroboy.schemas.DataReferenceHashSpec;
 import distroboy.schemas.DataReferenceRange;
 import distroboy.schemas.DataReferences;
 import distroboy.schemas.DataSourceRange;
@@ -25,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +42,8 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ClusterMember.class);
   private final BlockingQueue<Job> jobs;
+  private final ConcurrentMap<UUID, BlockingQueue<HashedDataReference>> dataReferenceHashers;
+  private final Object classifiersLock = new Object();
   private final AtomicBoolean disbanded = new AtomicBoolean(false);
   private final Object disbandedLock = new Object();
   private final AtomicReference<DataReferences> distributedReferences = new AtomicReference<>(null);
@@ -51,6 +56,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   public ClusterMember(Cluster cluster)
       throws IOException, ExecutionException, InterruptedException, TimeoutException {
     this.jobs = new LinkedBlockingQueue<>();
+    this.dataReferenceHashers = new ConcurrentHashMap<>();
     this.memberServer = ServerBuilder.forPort(cluster.memberPort).addService(this).build().start();
 
     try {
@@ -145,15 +151,66 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     }
 
     // TODO: backpressure
-    final var iterator =
-        PersistedData.storedReferences
-            .get(uuidFromBytes(request.getReference().getReferenceId()))
-            .get();
+    final var persistedData =
+        PersistedData.STORED_REFERENCES.get(uuidFromBytes(request.getReference().getReferenceId()));
+    final var iterator = persistedData.getSerialisingIterator();
+    long startInclusive = request.getRange().getStartInclusive();
+    long endExclusive = request.getRange().getEndExclusive();
+    long currentIndex = 0;
     while (iterator.hasNext()) {
-      final var value = iterator.next();
-      responseObserver.onNext(value);
+      try {
+        final var value = iterator.next();
+        if (currentIndex < startInclusive) {
+          continue;
+        }
+        if (currentIndex >= endExclusive) {
+          break;
+        }
+        responseObserver.onNext(value);
+      } finally {
+        currentIndex++;
+      }
     }
     responseObserver.onCompleted();
+  }
+
+  @Override
+  public void retrieveByHash(
+      DataReferenceHashSpec request, StreamObserver<Value> responseObserver) {
+    final var referenceId = uuidFromBytes(request.getReference().getReferenceId());
+    final var classifiersForDataReference =
+        dataReferenceHashers.computeIfAbsent(referenceId, dr -> new LinkedBlockingQueue<>());
+    HashedDataReference<?> hashedDataReference = classifiersForDataReference.peek();
+    synchronized (classifiersLock) {
+      while (hashedDataReference == null) {
+        try {
+          classifiersLock.wait();
+        } catch (InterruptedException e) {
+          // Just try again
+        }
+        hashedDataReference = classifiersForDataReference.peek();
+      }
+    }
+
+    synchronized (hashedDataReference.lock) {
+      hashedDataReference.retrieversByHash.put(request.getHash(), responseObserver);
+      if (hashedDataReference.retrieversByHash.size()
+          == hashedDataReference.expectedRetrieveCount) {
+        // pop this one off the queue, it's being handled now
+        classifiersForDataReference.poll();
+        // TODO: backpressure
+        final var persistedData = PersistedData.STORED_REFERENCES.get(referenceId);
+        final var iterator = persistedData.getIteratorWithSerialiser();
+        while (iterator.hasNext()) {
+          final var next = iterator.next();
+          final var hash = hashedDataReference.hash(next.value) % request.getModulo();
+          hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
+        }
+        for (StreamObserver<Value> retriever : hashedDataReference.retrieversByHash.values()) {
+          retriever.onCompleted();
+        }
+      }
+    }
   }
 
   @Override
@@ -166,6 +223,40 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     log.debug("Disbanded");
     responseObserver.onNext(Empty.newBuilder().build());
     responseObserver.onCompleted();
+  }
+
+  static class HashedDataReference<T> {
+    final DataReference dataReference;
+    final Function<T, Integer> hasher;
+    final int expectedRetrieveCount;
+    final Object lock;
+    final ConcurrentMap<Integer, StreamObserver<Value>> retrieversByHash;
+
+    public HashedDataReference(
+        DataReference dataReference, Function<T, Integer> hasher, int expectedRetrieveCount) {
+      this.dataReference = dataReference;
+      this.hasher = hasher;
+      this.expectedRetrieveCount = expectedRetrieveCount;
+      this.lock = new Object();
+      this.retrieversByHash = new ConcurrentHashMap<>();
+    }
+
+    @SuppressWarnings("unchecked")
+    public int hash(Object o) {
+      return hasher.apply((T) o);
+    }
+  }
+
+  public <T> void pushHasher(
+      DataReference dataReference, Function<T, Integer> hasher, int expectedRetrieveCount) {
+    synchronized (classifiersLock) {
+      final var hashersForDataReference =
+          dataReferenceHashers.computeIfAbsent(
+              uuidFromBytes(dataReference.getReferenceId()), dr -> new LinkedBlockingQueue<>());
+      hashersForDataReference.add(
+          new HashedDataReference<T>(dataReference, hasher, expectedRetrieveCount));
+      classifiersLock.notify();
+    }
   }
 
   public void addJob(Job job) {

@@ -10,12 +10,12 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
-public class ClusterPersistedDataSource implements DataSource<DataReferenceRange> {
-  private final List<DataReference> clusterMemberDataReferences;
+public class EvenlyRedistributedDataSource implements DataSource<DataReferenceRange> {
+  private final List<DataReference> dataReferences;
 
-  public ClusterPersistedDataSource(List<DataReference> clusterMemberDataReferences) {
-    this.clusterMemberDataReferences = clusterMemberDataReferences;
-    this.count = clusterMemberDataReferences.stream().mapToLong(DataReference::getCount).sum();
+  public EvenlyRedistributedDataSource(List<DataReference> dataReferences) {
+    this.dataReferences = dataReferences;
+    this.count = dataReferences.stream().mapToLong(DataReference::getCount).sum();
   }
 
   private final long count;
@@ -28,8 +28,7 @@ public class ClusterPersistedDataSource implements DataSource<DataReferenceRange
   @Override
   public Iterator<DataReferenceRange> enumerateRangeOfFullSet(
       final long startInclusive, final long endExclusive) {
-    final Deque<DataReference> remoteDataReferencesToIterate =
-        new ArrayDeque<>(clusterMemberDataReferences);
+    final Deque<DataReference> remoteDataReferencesToIterate = new ArrayDeque<>(dataReferences);
     if (remoteDataReferencesToIterate.isEmpty() || startInclusive == endExclusive) {
       return Collections.emptyIterator();
     }

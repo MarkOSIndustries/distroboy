@@ -5,7 +5,9 @@ import distroboy.core.clustering.serialisation.ProtobufValues;
 import distroboy.core.clustering.serialisation.Serialiser;
 import distroboy.core.clustering.serialisation.Serialisers;
 import distroboy.schemas.DataReference;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
   private final DataSource<Input> dataSource;
@@ -39,9 +41,8 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
   }
 
   public static class Builder<I, O, CO> {
-
-    private final DataSource<I> dataSource;
-    private final Operand<O, CO> operand;
+    protected final DataSource<I> dataSource;
+    protected final Operand<O, CO> operand;
 
     Builder(DataSource<I> dataSource, Operand<O, CO> operand) {
       this.dataSource = dataSource;
@@ -50,6 +51,11 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
 
     public <O2> Builder<I, O2, List<O2>> map(MapOp<O, O2> mapOp) {
       return new Builder<>(dataSource, operand.then(mapOp));
+    }
+
+    public <O2, O2I extends Iterator<O2>> IteratorBuilder<I, O2, O2I, List<O2I>> mapToIterators(
+        MapOp<O, O2I> mapOp) {
+      return new IteratorBuilder<>(dataSource, operand.then(mapOp));
     }
 
     public <O2> Builder<I, O2, List<O2>> flatMap(FlatMapOp<O, O2> flatMapOp) {
@@ -79,6 +85,21 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
           dataSource,
           operand.then(new PersistToHeap<>(serialiser)),
           new ProtobufValues<>(DataReference::parseFrom));
+    }
+  }
+
+  public static class IteratorBuilder<I, O, OI extends Iterator<O>, C> extends Builder<I, OI, C> {
+    IteratorBuilder(DataSource<I> dataSource, Operand<OI, C> operand) {
+      super(dataSource, operand);
+    }
+
+    public <K> Builder<I, Map.Entry<K, List<O>>, Map<K, List<O>>> groupBy(
+        GroupByOp<O, OI, K> groupByOp) {
+      return new Builder<>(dataSource, operand.then(groupByOp));
+    }
+
+    public IteratorBuilder<I, O, OI, List<OI>> materialise() {
+      return new IteratorBuilder<>(dataSource, operand.then(new MaterialiseOp<>()));
     }
   }
 }

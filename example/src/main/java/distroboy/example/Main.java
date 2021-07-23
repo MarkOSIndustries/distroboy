@@ -1,6 +1,7 @@
 package distroboy.example;
 
 import distroboy.core.Cluster;
+import distroboy.core.Hashing;
 import distroboy.core.Logging;
 import distroboy.core.clustering.serialisation.Serialisers;
 import distroboy.core.filesystem.DirSource;
@@ -21,8 +22,9 @@ public class Main {
     try (final var cluster =
         Cluster.newBuilder("distroboy.example", expectedMembers).memberPort(port).join()) {
 
+      // Filtering and counting the lines in some files
       cluster
-          .runCollect(
+          .collect(
               DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
@@ -32,8 +34,9 @@ public class Main {
                 log.info("Lines beginning with 'yay': {}", count);
               });
 
+      // Filtering and collecting the lines in some files
       cluster
-          .runCollect(
+          .collect(
               DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
@@ -45,21 +48,44 @@ public class Main {
                 }
               });
 
+      // Persisting a set of results for re-use in later operations
       final var heapPersistedLines =
-          cluster.runPersist(
+          cluster.persist(
               DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .persistToHeap(Serialisers.stringValues));
 
+      // Using persisted results in a new distributed operation - distributing evenly across the
+      // cluster
       cluster
-          .runCollect(
-              DistributedOpSequence.readFrom(heapPersistedLines)
-                  .flatMap(
-                      dataReference -> cluster.retrieve(dataReference, Serialisers.stringValues))
-                  .count())
+          .collect(
+              cluster.redistributeEqually(heapPersistedLines, Serialisers.stringValues).count())
           .ifGotResult(
               count -> log.info("Lines beginning with 'yay' via heap persistence: {}", count));
+
+      // Using persisted results in a groupBy
+      cluster
+          .collect(
+              cluster
+                  .redistributeAndGroupBy(
+                      heapPersistedLines,
+                      line -> line.length(),
+                      Hashing::integers,
+                      10,
+                      Serialisers.stringValues)
+                  .collect(
+                      Serialisers.mapEntries(
+                          Serialisers.integerValues,
+                          Serialisers.listEntries(Serialisers.stringValues))))
+          .ifGotResult(
+              map -> {
+                map.forEach(
+                    (length, lines) -> {
+                      log.info(
+                          " -- {} lines starting with yay had length {}", lines.size(), length);
+                    });
+              });
     }
   }
 }

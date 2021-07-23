@@ -1,4 +1,4 @@
-rootProject.name = 'DistroBoy'
+rootProject.name = 'distroboy'
 include 'coordinator'
 include 'core'
 include 'example'

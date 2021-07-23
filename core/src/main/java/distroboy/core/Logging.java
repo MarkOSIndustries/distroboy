@@ -15,7 +15,7 @@ public interface Logging {
     context.reset();
     Logger rootLogger = context.getLogger(Logger.ROOT_LOGGER_NAME);
     rootLogger.setLevel(Level.INFO);
-    context.getLogger("distroboy").setLevel(Level.DEBUG);
+    //    context.getLogger("distroboy").setLevel(Level.DEBUG);
     rootLogger.addAppender(makeConsoleAppender(context));
   }
 

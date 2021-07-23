@@ -49,12 +49,20 @@ message DataSourceRange {
 
 message Value {
   oneof value_oneof {
-    int32 int_value = 1;
-    int64 long_value = 2;
-    string string_value = 3;
-    bytes bytes_value = 4;
-    google.protobuf.Any any_value = 5;
+    bool bool_value = 1;
+    int32 int_value = 2;
+    int64 long_value = 3;
+    float float_value = 4;
+    double double_value = 5;
+    string string_value = 6;
+    bytes bytes_value = 7;
+    google.protobuf.Any any_value = 8;
+    RepeatedValue repeated_value = 9;
   }
+}
+
+message RepeatedValue {
+  repeated Value values = 1;
 }
 
 service ClusterMember {
@@ -62,6 +70,7 @@ service ClusterMember {
   rpc process(DataSourceRange) returns (stream Value);
   rpc distribute(DataReferences) returns (google.protobuf.Empty);
   rpc retrieveRange(DataReferenceRange) returns (stream Value);
+  rpc retrieveByHash(DataReferenceHashSpec) returns (stream Value);
   rpc disband(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
@@ -82,4 +91,10 @@ message DataReferenceRange {
 
 message DataReferences {
   repeated DataReference references = 1;
+}
+
+message DataReferenceHashSpec {
+  DataReference reference = 1;
+  uint32 hash = 2;
+  uint32 modulo = 3;
 }
