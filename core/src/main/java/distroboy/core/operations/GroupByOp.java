@@ -2,7 +2,6 @@ package distroboy.core.operations;
 
 import static java.util.stream.Collectors.groupingBy;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +24,6 @@ public interface GroupByOp<I, II extends Iterator<I>, K>
 
   @Override
   default Map<K, List<I>> collect(Iterator<Map.Entry<K, List<I>>> results) {
-    final var map = new HashMap<K, List<I>>();
-    while (results.hasNext()) {
-      Map.Entry<K, List<I>> next = results.next();
-      map.put(next.getKey(), next.getValue());
-    }
-    return map;
+    return MapFrom.iterator(results);
   }
 }

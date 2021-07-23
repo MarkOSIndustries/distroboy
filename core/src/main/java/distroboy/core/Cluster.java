@@ -24,7 +24,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -115,7 +114,7 @@ public final class Cluster implements AutoCloseable {
       DistributedOpSequence<I, O, List<DataReference>> opSequence) throws Exception {
     final var dataReferencesResult = execute(opSequence);
 
-    if (dataReferencesResult.hasResult()) {
+    if (dataReferencesResult.isClusterLeader()) {
       final var dataReferences = dataReferencesResult.getResult();
 
       // The members will all want remote data references from us
@@ -159,14 +158,12 @@ public final class Cluster implements AutoCloseable {
     // calls will be made
   }
 
-  public <I, K>
-      DistributedOpSequence.Builder<Integer, Map.Entry<K, List<I>>, Map<K, List<I>>>
-          redistributeAndGroupBy(
-              List<DataReference> dataReferences,
-              Function<I, K> classifier,
-              Function<K, Integer> hasher,
-              int partitions,
-              Serialiser<I> serialiser) {
+  public <I, K> DistributedOpSequence.HashMapBuilder<Integer, K, List<I>> redistributeAndGroupBy(
+      List<DataReference> dataReferences,
+      Function<I, K> classifier,
+      Function<K, Integer> hasher,
+      int partitions,
+      Serialiser<I> serialiser) {
     return redistributeByHash(dataReferences, classifier, hasher, partitions, serialiser)
         .groupBy(classifier::apply);
   }

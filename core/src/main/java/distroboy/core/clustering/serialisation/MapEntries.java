@@ -29,7 +29,7 @@ public class MapEntries<K, V> implements Serialiser<Map.Entry<K, V>> {
 
   @Override
   public Map.Entry<K, V> deserialise(Value value) throws Exception {
-    return new AbstractMap.SimpleEntry<>(
+    return new AbstractMap.SimpleImmutableEntry<>(
         keySerialiser.deserialise(value.getRepeatedValue().getValuesList().get(0)),
         valueSerialiser.deserialise(value.getRepeatedValue().getValuesList().get(1)));
   }

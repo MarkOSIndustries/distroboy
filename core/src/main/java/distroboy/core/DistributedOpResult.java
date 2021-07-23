@@ -4,14 +4,14 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface DistributedOpResult<T> {
-  boolean hasResult();
+  boolean isClusterLeader();
 
   T getResult();
 
   <U> DistributedOpResult<U> map(Function<T, U> mapper);
 
-  default void ifGotResult(Consumer<T> consume) {
-    if (hasResult()) {
+  default void onClusterLeader(Consumer<T> consume) {
+    if (isClusterLeader()) {
       consume.accept(getResult());
     }
   }
@@ -24,7 +24,7 @@ public interface DistributedOpResult<T> {
     }
 
     @Override
-    public boolean hasResult() {
+    public boolean isClusterLeader() {
       return true;
     }
 
@@ -41,7 +41,7 @@ public interface DistributedOpResult<T> {
 
   class WorkerResult<T> implements DistributedOpResult<T> {
     @Override
-    public boolean hasResult() {
+    public boolean isClusterLeader() {
       return false;
     }
 

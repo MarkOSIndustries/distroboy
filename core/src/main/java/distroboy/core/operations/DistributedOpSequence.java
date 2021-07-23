@@ -93,13 +93,30 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       super(dataSource, operand);
     }
 
-    public <K> Builder<I, Map.Entry<K, List<O>>, Map<K, List<O>>> groupBy(
-        GroupByOp<O, OI, K> groupByOp) {
-      return new Builder<>(dataSource, operand.then(groupByOp));
+    public <K> HashMapBuilder<I, K, List<O>> groupBy(GroupByOp<O, OI, K> groupByOp) {
+      return new HashMapBuilder<>(dataSource, operand.then(groupByOp));
     }
 
     public IteratorBuilder<I, O, OI, List<OI>> materialise() {
       return new IteratorBuilder<>(dataSource, operand.then(new MaterialiseOp<>()));
+    }
+  }
+
+  public static class HashMapBuilder<I, K, V> extends Builder<I, Map.Entry<K, V>, Map<K, V>> {
+    HashMapBuilder(DataSource<I> dataSource, Operand<Map.Entry<K, V>, Map<K, V>> operand) {
+      super(dataSource, operand);
+    }
+
+    public <K2> HashMapBuilder<I, K2, V> mapKeys(HashMapKeysOp<K, V, K2> hashMapKeysOp) {
+      return new HashMapBuilder<>(dataSource, operand.then(hashMapKeysOp));
+    }
+
+    public <V2> HashMapBuilder<I, K, V2> mapValues(HashMapValuesOp<K, V, V2> hashMapValuesOp) {
+      return new HashMapBuilder<>(dataSource, operand.then(hashMapValuesOp));
+    }
+
+    public <K2, V2> HashMapBuilder<I, K2, V2> mapKeysAndValues(HashMapOp<K, V, K2, V2> hashMapOp) {
+      return new HashMapBuilder<>(dataSource, operand.then(hashMapOp));
     }
   }
 }

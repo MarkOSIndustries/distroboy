@@ -29,7 +29,7 @@ public class Main {
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .count())
-          .ifGotResult(
+          .onClusterLeader(
               count -> {
                 log.info("Lines beginning with 'yay': {}", count);
               });
@@ -41,7 +41,7 @@ public class Main {
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .collect(Serialisers.stringValues))
-          .ifGotResult(
+          .onClusterLeader(
               lines -> {
                 for (String l : lines) {
                   log.info("-- {}", l);
@@ -61,7 +61,7 @@ public class Main {
       cluster
           .collect(
               cluster.redistributeEqually(heapPersistedLines, Serialisers.stringValues).count())
-          .ifGotResult(
+          .onClusterLeader(
               count -> log.info("Lines beginning with 'yay' via heap persistence: {}", count));
 
       // Using persisted results in a groupBy
@@ -74,16 +74,14 @@ public class Main {
                       Hashing::integers,
                       10,
                       Serialisers.stringValues)
+                  .mapValues(lines -> lines.size())
                   .collect(
-                      Serialisers.mapEntries(
-                          Serialisers.integerValues,
-                          Serialisers.listEntries(Serialisers.stringValues))))
-          .ifGotResult(
+                      Serialisers.mapEntries(Serialisers.integerValues, Serialisers.integerValues)))
+          .onClusterLeader(
               map -> {
                 map.forEach(
-                    (length, lines) -> {
-                      log.info(
-                          " -- {} lines starting with yay had length {}", lines.size(), length);
+                    (length, lineCount) -> {
+                      log.info(" -- {} lines starting with yay had length {}", lineCount, length);
                     });
               });
     }
