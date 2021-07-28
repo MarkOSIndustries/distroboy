@@ -10,10 +10,11 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 import distroboy.core.clustering.ClusterMember;
 import distroboy.core.clustering.ClusterMemberId;
 import distroboy.core.clustering.serialisation.Serialiser;
+import distroboy.core.iterators.FlatMappingIterator;
+import distroboy.core.iterators.IteratorWithResources;
+import distroboy.core.iterators.MappingIteratorWithResources;
 import distroboy.core.operations.DistributedOpSequence;
 import distroboy.core.operations.EvenlyRedistributedDataSource;
-import distroboy.core.operations.FlatMapIterator;
-import distroboy.core.operations.MappingIterator;
 import distroboy.core.operations.StaticDataSource;
 import distroboy.schemas.DataReference;
 import distroboy.schemas.DataReferenceHashSpec;
@@ -127,11 +128,13 @@ public final class Cluster implements AutoCloseable {
   public <I> DistributedOpSequence.Builder<DataReferenceRange, I, List<I>> redistributeEqually(
       List<DataReference> dataReferences, Serialiser<I> serialiser) {
     return DistributedOpSequence.readFrom(new EvenlyRedistributedDataSource(dataReferences))
-        .flatMap(dataReference -> retrieveRange(dataReference, serialiser));
+        .flatMap(
+            dataReference -> IteratorWithResources.from(retrieveRange(dataReference, serialiser)));
   }
 
   public <I, H>
-      DistributedOpSequence.IteratorBuilder<Integer, I, Iterator<I>, List<Iterator<I>>>
+      DistributedOpSequence.IteratorBuilder<
+              Integer, I, IteratorWithResources<I>, List<IteratorWithResources<I>>>
           redistributeByHash(
               List<DataReference> dataReferences,
               Function<I, H> classifier,
@@ -153,7 +156,10 @@ public final class Cluster implements AutoCloseable {
         new StaticDataSource<>(
             IntStream.range(0, partitions).boxed().collect(toUnmodifiableList()));
     return DistributedOpSequence.readFrom(hashesSource) // start with a hash value per node
-        .mapToIterators(hash -> retrieveByHash(dataReferences, hash, partitions, serialiser))
+        .mapToIterators(
+            hash ->
+                IteratorWithResources.from(
+                    retrieveByHash(dataReferences, hash, partitions, serialiser)))
         .materialise(); // important that we materialise, otherwise not all GRPC retrieveByHash
     // calls will be made
   }
@@ -172,7 +178,8 @@ public final class Cluster implements AutoCloseable {
     clusterMember.addJob(
         dataSourceRange -> {
           final var iterator = opSequence.getOperand().enumerateRangeForNode(dataSourceRange);
-          return new MappingIterator<>(iterator, opSequence.getSerialiser()::serialise);
+          return new MappingIteratorWithResources<>(
+              iterator, opSequence.getSerialiser()::serialise);
         });
 
     if (!clusterMember.isLeader()) {
@@ -193,7 +200,7 @@ public final class Cluster implements AutoCloseable {
 
     log.debug("{} - collecting", clusterName);
     final var results =
-        new FlatMapIterator<>(
+        new FlatMappingIterator<>(
             memberJobs.iterator(),
             memberJob -> opSequence.getSerialiser().deserialiseIterator(memberJob.join()));
 
@@ -232,9 +239,9 @@ public final class Cluster implements AutoCloseable {
                         toUnmodifiableList())));
 
     return serialiser.deserialiseIterator(
-        new FlatMapIterator<>(
+        new FlatMappingIterator<>(
             valueIteratorsByMember.values().iterator(),
             valueIterators ->
-                new FlatMapIterator<>(valueIterators.iterator(), Function.identity())));
+                new FlatMappingIterator<>(valueIterators.iterator(), Function.identity())));
   }
 }

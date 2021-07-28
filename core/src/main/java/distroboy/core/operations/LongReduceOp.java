@@ -1,6 +1,6 @@
 package distroboy.core.operations;
 
-import java.util.Iterator;
+import distroboy.core.iterators.IteratorWithResources;
 import java.util.List;
 
 public interface LongReduceOp<I> extends ReduceOp<I, Long> {
@@ -8,7 +8,7 @@ public interface LongReduceOp<I> extends ReduceOp<I, Long> {
     return 0L;
   }
 
-  default Iterator<Long> asIterator(Long aggregate) {
-    return List.of(aggregate).iterator();
+  default IteratorWithResources<Long> asIterator(Long aggregate) {
+    return IteratorWithResources.from(List.of(aggregate).iterator());
   }
 }

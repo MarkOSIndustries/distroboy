@@ -1,5 +1,7 @@
 package distroboy.core.operations;
 
+import distroboy.core.iterators.IteratorTo;
+import distroboy.core.iterators.IteratorWithResources;
 import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -11,8 +13,9 @@ public interface HashMapOp<K, V, K2, V2>
   V2 mapValue(V value);
 
   @Override
-  default Iterator<Map.Entry<K2, V2>> apply(Iterator<Map.Entry<K, V>> input) {
-    return new Iterator<Map.Entry<K2, V2>>() {
+  default IteratorWithResources<Map.Entry<K2, V2>> apply(
+      IteratorWithResources<Map.Entry<K, V>> input) throws Exception {
+    return new IteratorWithResources<Map.Entry<K2, V2>>() {
       @Override
       public boolean hasNext() {
         return input.hasNext();
@@ -24,11 +27,16 @@ public interface HashMapOp<K, V, K2, V2>
         return new AbstractMap.SimpleImmutableEntry<>(
             mapKey(next.getKey()), mapValue(next.getValue()));
       }
+
+      @Override
+      public void close() throws Exception {
+        input.close();
+      }
     };
   }
 
   @Override
   default Map<K2, V2> collect(Iterator<Map.Entry<K2, V2>> results) {
-    return MapFrom.iterator(results);
+    return IteratorTo.map(results);
   }
 }

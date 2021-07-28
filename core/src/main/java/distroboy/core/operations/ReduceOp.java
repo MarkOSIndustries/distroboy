@@ -2,6 +2,7 @@ package distroboy.core.operations;
 
 import static java.util.Objects.nonNull;
 
+import distroboy.core.iterators.IteratorWithResources;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -11,21 +12,24 @@ public interface ReduceOp<I, O> extends Operation<I, O, O> {
     return null;
   }
 
-  default Iterator<O> asIterator(O aggregate) {
-    return nonNull(aggregate) ? List.of(aggregate).iterator() : Collections.emptyIterator();
+  default IteratorWithResources<O> asIterator(O aggregate) {
+    return IteratorWithResources.from(
+        nonNull(aggregate) ? List.of(aggregate).iterator() : Collections.emptyIterator());
   }
 
-  O reduceInput(O aggregate, I input);
+  O reduceInput(O aggregate, I input) throws Exception;
 
   O reduceOutput(O aggregate, O result);
 
   @Override
-  default Iterator<O> apply(Iterator<I> input) {
-    var aggregate = initAggregate();
-    while (input.hasNext()) {
-      aggregate = reduceInput(aggregate, input.next());
+  default IteratorWithResources<O> apply(IteratorWithResources<I> input) throws Exception {
+    try (input) {
+      var aggregate = initAggregate();
+      while (input.hasNext()) {
+        aggregate = reduceInput(aggregate, input.next());
+      }
+      return asIterator(aggregate);
     }
-    return asIterator(aggregate);
   }
 
   @Override

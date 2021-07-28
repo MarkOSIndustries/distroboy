@@ -3,10 +3,15 @@ package distroboy.example;
 import distroboy.core.Cluster;
 import distroboy.core.Hashing;
 import distroboy.core.Logging;
+import distroboy.core.clustering.ClusterMemberId;
 import distroboy.core.clustering.serialisation.Serialisers;
 import distroboy.core.filesystem.DirSource;
 import distroboy.core.filesystem.ReadLinesFromFiles;
 import distroboy.core.operations.DistributedOpSequence;
+import distroboy.parquet.WriteViaAvroToParquetFiles;
+import distroboy.parquet.WriteViaProtobufToParquetFiles;
+import distroboy.schemas.HostAndPort;
+import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,11 +26,10 @@ public class Main {
 
     try (final var cluster =
         Cluster.newBuilder("distroboy.example", expectedMembers).memberPort(port).join()) {
-
       // Filtering and counting the lines in some files
       cluster
           .execute(
-              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
+              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .count())
@@ -37,7 +41,7 @@ public class Main {
       // Filtering and collecting the lines in some files
       cluster
           .execute(
-              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
+              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .collect(Serialisers.stringValues))
@@ -51,7 +55,7 @@ public class Main {
       // Persisting a set of results for re-use in later operations
       final var heapPersistedLines =
           cluster.persist(
-              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy"))
+              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .persistToHeap(Serialisers.stringValues));
@@ -83,6 +87,64 @@ public class Main {
                     (length, lineCount) -> {
                       log.info(" -- {} lines starting with yay had length {}", lineCount, length);
                     });
+              });
+
+      // Writing results as avro/parquet somewhere
+      cluster
+          .execute(
+              cluster
+                  .redistributeAndGroupBy(
+                      heapPersistedLines,
+                      line -> line.length(),
+                      Hashing::integers,
+                      10,
+                      Serialisers.stringValues)
+                  .map(
+                      lineLengthWithLines ->
+                          new SampleParquetOutputRecord(
+                              new SampleParquetOutputRecord.InnerThing(
+                                  lineLengthWithLines.getValue().get(0)),
+                              lineLengthWithLines.getKey()))
+                  .reduce(
+                      new WriteViaAvroToParquetFiles<SampleParquetOutputRecord>(
+                          Path.of(
+                              "/tmp/distroboy/output.avro." + ClusterMemberId.self + ".parquet"),
+                          SampleParquetOutputRecord.class))
+                  .map(Object::toString)
+                  .collect(Serialisers.stringValues))
+          .onClusterLeader(
+              outputFilePath -> {
+                log.info("We wrote avro/parquet out to {}", outputFilePath);
+              });
+
+      // Writing results as protobuf/parquet somewhere
+      cluster
+          .execute(
+              cluster
+                  .redistributeAndGroupBy(
+                      heapPersistedLines,
+                      line -> line.length(),
+                      Hashing::integers,
+                      10,
+                      Serialisers.stringValues)
+                  .map(
+                      lineLengthWithLines ->
+                          HostAndPort.newBuilder()
+                              .setHost(lineLengthWithLines.getValue().get(0))
+                              .setPort(lineLengthWithLines.getKey())
+                              .build())
+                  .reduce(
+                      new WriteViaProtobufToParquetFiles<HostAndPort>(
+                          Path.of(
+                              "/tmp/distroboy/output.protobuf."
+                                  + ClusterMemberId.self
+                                  + ".parquet"),
+                          HostAndPort.class))
+                  .map(Object::toString)
+                  .collect(Serialisers.stringValues))
+          .onClusterLeader(
+              outputFilePath -> {
+                log.info("We wrote protobuf/parquet out to {}", outputFilePath);
               });
     }
   }

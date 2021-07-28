@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toUnmodifiableMap;
 
 import com.google.protobuf.Empty;
 import distroboy.core.Cluster;
+import distroboy.core.iterators.IteratorWithResources;
 import distroboy.schemas.ClusterMemberGrpc;
 import distroboy.schemas.ClusterMemberIdentity;
 import distroboy.schemas.ClusterMembers;
@@ -18,10 +19,10 @@ import distroboy.schemas.DataSourceRange;
 import distroboy.schemas.Value;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,7 +43,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ClusterMember.class);
   private final BlockingQueue<Job> jobs;
-  private final ConcurrentMap<UUID, BlockingQueue<HashedDataReference>> dataReferenceHashers;
+  private final ConcurrentMap<UUID, BlockingQueue<HashedDataReference<?>>> dataReferenceHashers;
   private final Object classifiersLock = new Object();
   private final AtomicBoolean disbanded = new AtomicBoolean(false);
   private final Object disbandedLock = new Object();
@@ -109,31 +110,44 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
 
   @Override
   public void process(DataSourceRange dataSourceRange, StreamObserver<Value> responseObserver) {
-    log.debug("Starting job {}", describeRange(dataSourceRange));
-    Job job = null;
-    while (job == null) {
-      try {
-        job = jobs.poll(10, TimeUnit.SECONDS);
-      } catch (InterruptedException e) {
-        // Ignore, just try again
+    try {
+      log.debug("Starting job {}", describeRange(dataSourceRange));
+      Job job = null;
+      while (job == null) {
+        try {
+          job = jobs.poll(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          // Ignore, just try again
+        }
       }
-    }
 
-    log.debug("Responding to job {}", describeRange(dataSourceRange));
-    Iterator<Value> iterator = job.execute(dataSourceRange);
-    // TODO: backpressure
-    while (iterator.hasNext()) {
-      final var value = iterator.next();
-      responseObserver.onNext(value);
+      log.debug("Responding to job {}", describeRange(dataSourceRange));
+      try (IteratorWithResources<Value> iterator = job.execute(dataSourceRange)) {
+        // TODO: backpressure
+        while (iterator.hasNext()) {
+          final var value = iterator.next();
+          responseObserver.onNext(value);
+        }
+      }
+      responseObserver.onCompleted();
+      log.debug("Finished job {}", describeRange(dataSourceRange));
+    } catch (Exception e) {
+      log.error("Failed while executing job", e);
+      responseObserver.onError(Status.INTERNAL.asException());
     }
-    responseObserver.onCompleted();
-    log.debug("Finished job {}", describeRange(dataSourceRange));
   }
 
   @Override
   public void distribute(DataReferences request, StreamObserver<Empty> responseObserver) {
-    distributedReferences.set(request);
     synchronized (distributedReferencesLock) {
+      while (distributedReferences.get() != null) {
+        try {
+          distributedReferencesLock.wait();
+        } catch (InterruptedException e) {
+          // Ignore, keep trying...
+        }
+      }
+      distributedReferences.set(request);
       distributedReferencesLock.notify();
     }
     responseObserver.onNext(Empty.newBuilder().build());
@@ -203,7 +217,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
         final var iterator = persistedData.getIteratorWithSerialiser();
         while (iterator.hasNext()) {
           final var next = iterator.next();
-          final var hash = hashedDataReference.hash(next.value) % request.getModulo();
+          final var hash = Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
           hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
         }
         for (StreamObserver<Value> retriever : hashedDataReference.retrieversByHash.values()) {
@@ -274,8 +288,10 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
       while (distributedReferences.get() == null) {
         distributedReferencesLock.wait();
       }
+      final var referencesList = distributedReferences.getAndSet(null).getReferencesList();
+      distributedReferencesLock.notify();
+      return referencesList;
     }
-    return distributedReferences.get().getReferencesList();
   }
 
   @Override

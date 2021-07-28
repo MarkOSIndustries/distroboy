@@ -1,4 +1,4 @@
-package distroboy.core.operations;
+package distroboy.core.iterators;
 
 import java.util.Iterator;
 import java.util.function.Function;

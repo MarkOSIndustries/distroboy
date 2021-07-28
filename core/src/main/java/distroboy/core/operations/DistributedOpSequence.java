@@ -4,8 +4,8 @@ import distroboy.core.Count;
 import distroboy.core.clustering.serialisation.ProtobufValues;
 import distroboy.core.clustering.serialisation.Serialiser;
 import distroboy.core.clustering.serialisation.Serialisers;
+import distroboy.core.iterators.IteratorWithResources;
 import distroboy.schemas.DataReference;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -53,8 +53,8 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       return new Builder<>(dataSource, operand.then(mapOp));
     }
 
-    public <O2, O2I extends Iterator<O2>> IteratorBuilder<I, O2, O2I, List<O2I>> mapToIterators(
-        MapOp<O, O2I> mapOp) {
+    public <O2, O2I extends IteratorWithResources<O2>>
+        IteratorBuilder<I, O2, O2I, List<O2I>> mapToIterators(MapOp<O, O2I> mapOp) {
       return new IteratorBuilder<>(dataSource, operand.then(mapOp));
     }
 
@@ -79,16 +79,22 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
           dataSource, operand.then(new Count<>()), Serialisers.longValues);
     }
 
-    public <X> DistributedOpSequence<I, DataReference, List<DataReference>> persistToHeap(
+    public DistributedOpSequence<I, DataReference, List<DataReference>> persistToHeap(
         Serialiser<O> serialiser) {
       return new DistributedOpSequence<>(
           dataSource,
           operand.then(new PersistToHeap<>(serialiser)),
           new ProtobufValues<>(DataReference::parseFrom));
     }
+
+    public DistributedOpSequence<I, Void, Void> forEach(ForEachOp<O> forEachOp) {
+      return new DistributedOpSequence<>(
+          dataSource, operand.then(forEachOp), Serialisers.voidValues);
+    }
   }
 
-  public static class IteratorBuilder<I, O, OI extends Iterator<O>, C> extends Builder<I, OI, C> {
+  public static class IteratorBuilder<I, O, OI extends IteratorWithResources<O>, C>
+      extends Builder<I, OI, C> {
     IteratorBuilder(DataSource<I> dataSource, Operand<OI, C> operand) {
       super(dataSource, operand);
     }

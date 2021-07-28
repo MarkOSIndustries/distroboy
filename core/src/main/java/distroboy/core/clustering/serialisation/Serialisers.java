@@ -10,6 +10,7 @@ public interface Serialisers {
   DoubleValues doubleValues = new DoubleValues();
   StringValues stringValues = new StringValues();
   ByteArrayValues byteArrayValues = new ByteArrayValues();
+  Serialiser<Void> voidValues = new VoidValues();
 
   static <T> ListValues<T> listEntries(Serialiser<T> serialiser) {
     return new ListValues<>(serialiser);

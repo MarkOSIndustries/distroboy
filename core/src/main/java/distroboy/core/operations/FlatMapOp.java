@@ -1,12 +1,13 @@
 package distroboy.core.operations;
 
-import java.util.Iterator;
+import distroboy.core.iterators.FlatMappingIteratorWithResources;
+import distroboy.core.iterators.IteratorWithResources;
 
 public interface FlatMapOp<I, O> extends ListOp<I, O> {
-  Iterator<O> flatMap(I input);
+  IteratorWithResources<O> flatMap(I input);
 
   @Override
-  default Iterator<O> apply(Iterator<I> input) {
-    return new FlatMapIterator<>(input, this::flatMap);
+  default IteratorWithResources<O> apply(IteratorWithResources<I> input) throws Exception {
+    return new FlatMappingIteratorWithResources<>(input, this::flatMap);
   }
 }

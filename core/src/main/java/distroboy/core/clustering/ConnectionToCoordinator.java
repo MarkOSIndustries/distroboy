@@ -63,16 +63,27 @@ public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>
 
         //    coordinatorStream.onNext(MemberEvent.newBuilder().setJoinJob(joinJob).build());
         return coordinator.joinCluster(joinCluster).get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-      } catch (StatusRuntimeException statusRuntimeException) {
-        if (CODES_TO_RETRY_JOIN_CLUSTER_ON.contains(statusRuntimeException.getStatus().getCode())) {
-          log.info(
-              "JoinCluster failed with {}, retrying...",
-              statusRuntimeException.getStatus().getCode());
-          continue;
+      } catch (ExecutionException | StatusRuntimeException ex) {
+        Throwable cause = ex;
+        while (cause instanceof ExecutionException) {
+          cause = cause.getCause();
         }
-        log.error(
-            "JoinCluster failed with {}, failing", statusRuntimeException.getStatus().getCode());
-        throw statusRuntimeException;
+        if (cause instanceof StatusRuntimeException) {
+          StatusRuntimeException statusRuntimeException = (StatusRuntimeException) cause;
+          if (CODES_TO_RETRY_JOIN_CLUSTER_ON.contains(
+              statusRuntimeException.getStatus().getCode())) {
+            log.info(
+                "JoinCluster failed with {}, retrying...",
+                statusRuntimeException.getStatus().getCode());
+            continue;
+          }
+          log.error(
+              "JoinCluster failed with {}, failing", statusRuntimeException.getStatus().getCode());
+          throw statusRuntimeException;
+        }
+
+        log.error("JoinCluster failed in an unexpected manner, failing", ex);
+        throw ex;
       }
     }
   }

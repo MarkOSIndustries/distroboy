@@ -1,13 +1,12 @@
 package distroboy.core.operations;
 
+import distroboy.core.iterators.IteratorWithResources;
 import distroboy.schemas.DataReference;
 import distroboy.schemas.DataReferenceRange;
 import distroboy.schemas.DataSourceRange;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.List;
 
 public class EvenlyRedistributedDataSource implements DataSource<DataReferenceRange> {
@@ -26,11 +25,11 @@ public class EvenlyRedistributedDataSource implements DataSource<DataReferenceRa
   }
 
   @Override
-  public Iterator<DataReferenceRange> enumerateRangeOfFullSet(
+  public IteratorWithResources<DataReferenceRange> enumerateRangeOfFullSet(
       final long startInclusive, final long endExclusive) {
     final Deque<DataReference> remoteDataReferencesToIterate = new ArrayDeque<>(dataReferences);
     if (remoteDataReferencesToIterate.isEmpty() || startInclusive == endExclusive) {
-      return Collections.emptyIterator();
+      return IteratorWithResources.emptyIterator();
     }
 
     long toSkip = startInclusive;
@@ -59,6 +58,6 @@ public class EvenlyRedistributedDataSource implements DataSource<DataReferenceRa
       toSkip = 0;
     }
 
-    return ranges.iterator();
+    return IteratorWithResources.from(ranges.iterator());
   }
 }

@@ -1,7 +1,7 @@
 package distroboy.core.clustering;
 
 import distroboy.core.clustering.serialisation.Serialiser;
-import distroboy.core.operations.MappingIterator;
+import distroboy.core.iterators.MappingIterator;
 import distroboy.schemas.Value;
 import java.util.Iterator;
 import java.util.UUID;

@@ -1,5 +1,6 @@
 package distroboy.core.operations;
 
+import distroboy.core.iterators.IteratorWithResources;
 import distroboy.schemas.DataSourceRange;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +24,8 @@ public class AppliedOperation<I, O, CI, CO> implements Operand<O, CO> {
   }
 
   @Override
-  public Iterator<O> enumerateRangeForNode(DataSourceRange dataSourceRange) {
+  public IteratorWithResources<O> enumerateRangeForNode(DataSourceRange dataSourceRange)
+      throws Exception {
     return operation.apply(operand.enumerateRangeForNode(dataSourceRange));
   }
 

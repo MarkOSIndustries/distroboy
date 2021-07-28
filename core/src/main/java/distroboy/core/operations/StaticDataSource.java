@@ -1,7 +1,7 @@
 package distroboy.core.operations;
 
+import distroboy.core.iterators.IteratorWithResources;
 import java.util.Collection;
-import java.util.Iterator;
 
 public class StaticDataSource<I> implements DataSource<I> {
   private final Collection<I> data;
@@ -16,7 +16,8 @@ public class StaticDataSource<I> implements DataSource<I> {
   }
 
   @Override
-  public Iterator<I> enumerateRangeOfFullSet(long startInclusive, long endExclusive) {
-    return data.stream().skip(startInclusive).limit(endExclusive).iterator();
+  public IteratorWithResources<I> enumerateRangeOfFullSet(long startInclusive, long endExclusive) {
+    return IteratorWithResources.from(
+        data.stream().skip(startInclusive).limit(endExclusive).iterator());
   }
 }

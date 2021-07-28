@@ -3,4 +3,5 @@ include 'coordinator'
 include 'core'
 include 'example'
 include 'schemas'
+include 'parquet'
 

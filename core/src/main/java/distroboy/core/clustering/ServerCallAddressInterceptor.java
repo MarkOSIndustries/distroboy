@@ -10,7 +10,8 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 
 public class ServerCallAddressInterceptor implements ServerInterceptor, RemoteAddressProvider {
-  ThreadLocal<String> currentRequestClientAddress = ThreadLocal.withInitial(() -> null);
+  private final ThreadLocal<String> currentRequestClientAddress =
+      ThreadLocal.withInitial(() -> null);
 
   @Override
   public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(

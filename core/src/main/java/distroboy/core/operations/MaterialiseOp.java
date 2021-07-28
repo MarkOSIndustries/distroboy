@@ -1,10 +1,11 @@
 package distroboy.core.operations;
 
-import java.util.Iterator;
+import distroboy.core.iterators.IteratorTo;
+import distroboy.core.iterators.IteratorWithResources;
 
 public class MaterialiseOp<I> implements ListOp<I, I> {
   @Override
-  public Iterator<I> apply(Iterator<I> input) {
-    return ListFrom.iterator(input).iterator();
+  public IteratorWithResources<I> apply(IteratorWithResources<I> input) throws Exception {
+    return IteratorWithResources.from(IteratorTo.list(input).iterator());
   }
 }
