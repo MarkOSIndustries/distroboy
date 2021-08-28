@@ -70,6 +70,10 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       return new Builder<>(dataSource, operand.then(filterOp));
     }
 
+    public Builder<I, List<O>, List<List<O>>> batch(int batchSize) {
+      return new Builder<>(dataSource, operand.then(new BatchOp<>(batchSize)));
+    }
+
     public DistributedOpSequence<I, O, CO> collect(Serialiser<O> serialiser) {
       return new DistributedOpSequence<>(dataSource, operand, serialiser);
     }

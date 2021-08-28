@@ -10,7 +10,6 @@ public class Main {
 
   public static void main(String[] args) throws Exception {
     Logging.configureDefault();
-    Coordinator.run(7070);
-    log.info("Shutting down");
+    Coordinator.startAndBlockUntilShutdown(7070);
   }
 }

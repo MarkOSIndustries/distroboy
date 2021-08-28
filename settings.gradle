@@ -4,4 +4,6 @@ include 'core'
 include 'example'
 include 'schemas'
 include 'parquet'
+include 'aws-s3'
+include 'kafka'
 

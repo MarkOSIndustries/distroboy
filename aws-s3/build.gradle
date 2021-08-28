@@ -1,0 +1,6 @@
+dependencies {
+    api project(':core')
+
+    implementation platform('software.amazon.awssdk:bom:2.15.0')
+    api 'software.amazon.awssdk:s3'
+}
