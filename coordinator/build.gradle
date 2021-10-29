@@ -4,12 +4,15 @@ dependencies {
     implementation group: 'io.perfmark', name: 'perfmark-api', version: '0.24.0'
 }
 
+
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn configurations.runtimeClasspath
     manifest {
         attributes(
-                'Class-Path': configurations.compileClasspath.collect { it.getName() }.join(' '),
+                'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' '),
                 'Main-Class': 'distroboy.coordinator.Main'
         )
     }
-    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
 }
