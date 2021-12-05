@@ -11,16 +11,70 @@ buildscript {
 
 subprojects {
     group 'distroboy'
-    version '1.0-SNAPSHOT'
+    version "${version_string}"
 
     apply plugin: 'java'
     apply plugin: 'java-library'
     apply plugin: 'com.github.sherter.google-java-format'
 
-    test.dependsOn verifyGoogleJavaFormat
+    compileJava.dependsOn verifyGoogleJavaFormat
 
     repositories {
         mavenCentral()
+    }
+
+    jar {
+        manifest {
+            attributes (
+                    'Implementation-Title': "distroboy-${project.name}",
+                    'Implementation-Version': "${version_string}",
+                    'DistroBoy-CommitSHA': "${commit_sha}"
+            )
+        }
+    }
+
+    project.ext.executableJar = { String mainClass ->
+        jar {
+            manifest {
+                attributes(
+                        'Class-Path': configurations.runtimeClasspath.collect { 'dependencies/' + it.getName() }.join(' '),
+                        'Main-Class': mainClass
+                )
+            }
+        }
+    }
+
+    project.ext.publishToGitHubPackages = {
+        apply plugin: 'maven-publish'
+        publishing {
+            repositories {
+                maven {
+                    name = "GitHubPackages"
+                    url = "https://maven.pkg.github.com/MarkOSIndustries/distroboy"
+                    credentials {
+                        username = System.getenv("GITHUB_ACTOR")
+                        password = System.getenv("GITHUB_TOKEN")
+                    }
+                }
+            }
+        }
+    }
+
+    project.ext.distributeWithDependencies = {
+        apply plugin: 'distribution'
+        distributions {
+            main {
+                distributionBaseName = "distroboy-${project.name}"
+                contents {
+                    into("") {
+                        from jar.archiveFile
+                    }
+                    into("dependencies") {
+                        from configurations.runtimeClasspath
+                    }
+                }
+            }
+        }
     }
 
     tasks.withType(JavaCompile) {

@@ -1,0 +1,29 @@
+version: '3.4'
+services:
+  coordinator:
+    build:
+      context: ..
+      dockerfile: coordinator/Dockerfile
+      target: runtime
+  example-job-1:
+    build:
+      context: ..
+      dockerfile: example/Dockerfile
+      target: runtime
+    environment:
+      COORDINATOR_HOST: coordinator
+    volumes:
+      - "./sample-data:/sample-data:ro"
+      - "output-data:/output-data"
+  example-job-2:
+    build:
+      context: ..
+      dockerfile: example/Dockerfile
+      target: runtime
+    environment:
+      COORDINATOR_HOST: coordinator
+    volumes:
+      - "./sample-data:/sample-data:ro"
+      - "output-data:/output-data"
+volumes:
+  output-data:

@@ -3,16 +3,8 @@ dependencies {
     implementation project(':parquet')
     implementation group: 'io.grpc', name: 'grpc-netty', version: '1.38.1'
     implementation group: 'io.perfmark', name: 'perfmark-api', version: '0.24.0'
+    implementation group: 'org.aeonbits.owner', name: 'owner', version: '1.0.12'
 }
 
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    dependsOn configurations.runtimeClasspath
-    manifest {
-        attributes(
-            'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' '),
-            'Main-Class': 'distroboy.example.Main'
-        )
-    }
-    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-}
+project.executableJar('distroboy.example.Main')
+project.distributeWithDependencies()

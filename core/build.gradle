@@ -4,3 +4,5 @@ dependencies {
     api group: 'com.google.guava', name: 'guava', version: '30.0-jre'
     api project(':schemas')
 }
+
+project.publishToGitHubPackages()
