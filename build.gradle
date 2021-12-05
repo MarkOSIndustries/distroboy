@@ -57,7 +57,6 @@ subprojects {
                     }
                 }
                 pom {
-                    name = "distroboy-${project.name}"
                     url = 'https://github.com/MarkOSIndustries/distroboy'
                     licenses {
                         license {
