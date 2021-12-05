@@ -58,3 +58,5 @@ idea {
 //    sourceDirs += file("$projectDir/somethign/else/");
     }
 }
+
+project.publishToGitHubPackages()

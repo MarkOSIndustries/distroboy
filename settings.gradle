@@ -4,4 +4,3 @@ include 'core'
 include 'example'
 include 'schemas'
 include 'parquet'
-

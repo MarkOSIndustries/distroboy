@@ -12,6 +12,7 @@ import distroboy.parquet.WriteViaAvroToParquetFiles;
 import distroboy.parquet.WriteViaProtobufToParquetFiles;
 import distroboy.schemas.HostAndPort;
 import java.nio.file.Path;
+import org.aeonbits.owner.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,15 +22,17 @@ public class Main {
   public static void main(String[] args) throws Exception {
     Logging.configureDefault();
 
-    final var port = args.length > 0 ? Integer.parseInt(args[0]) : 7071;
-    final var expectedMembers = args.length > 1 ? Integer.parseInt(args[1]) : 2;
+    final var config = ConfigFactory.create(ExampleConfig.class);
 
     try (final var cluster =
-        Cluster.newBuilder("distroboy.example", expectedMembers).memberPort(port).join()) {
+        Cluster.newBuilder("distroboy-example", config.expectedMembers())
+            .coordinator(config.coordinatorHost(), config.coordinatorPort())
+            .memberPort(config.memberPort())
+            .join()) {
       // Filtering and counting the lines in some files
       cluster
           .execute(
-              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy/txt"))
+              DistributedOpSequence.readFrom(new DirSource("/sample-data/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .count())
@@ -41,7 +44,7 @@ public class Main {
       // Filtering and collecting the lines in some files
       cluster
           .execute(
-              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy/txt"))
+              DistributedOpSequence.readFrom(new DirSource("/sample-data/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .collect(Serialisers.stringValues))
@@ -55,7 +58,7 @@ public class Main {
       // Persisting a set of results for re-use in later operations
       final var heapPersistedLines =
           cluster.persist(
-              DistributedOpSequence.readFrom(new DirSource("/tmp/distroboy/txt"))
+              DistributedOpSequence.readFrom(new DirSource("/sample-data/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
                   .persistToHeap(Serialisers.stringValues));
@@ -107,8 +110,7 @@ public class Main {
                               lineLengthWithLines.getKey()))
                   .reduce(
                       new WriteViaAvroToParquetFiles<SampleParquetOutputRecord>(
-                          Path.of(
-                              "/tmp/distroboy/output.avro." + ClusterMemberId.self + ".parquet"),
+                          Path.of("/output-data/output.avro." + ClusterMemberId.self + ".parquet"),
                           SampleParquetOutputRecord.class))
                   .map(Object::toString)
                   .collect(Serialisers.stringValues))
@@ -136,9 +138,7 @@ public class Main {
                   .reduce(
                       new WriteViaProtobufToParquetFiles<HostAndPort>(
                           Path.of(
-                              "/tmp/distroboy/output.protobuf."
-                                  + ClusterMemberId.self
-                                  + ".parquet"),
+                              "/output-data/output.protobuf." + ClusterMemberId.self + ".parquet"),
                           HostAndPort.class))
                   .map(Object::toString)
                   .collect(Serialisers.stringValues))
