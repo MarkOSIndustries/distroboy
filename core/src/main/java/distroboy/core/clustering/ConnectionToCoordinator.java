@@ -22,9 +22,14 @@ public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>
 
   private final CoordinatorGrpc.CoordinatorFutureStub coordinator;
   private final StreamObserver<MemberEvent> coordinatorStream;
+  private final String coordinatorHost;
+  private final int coordinatorPort;
 
-  public ConnectionToCoordinator(String host, int port) {
-    final var channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+  public ConnectionToCoordinator(String coordinatorHost, int coordinatorPort) {
+    this.coordinatorHost = coordinatorHost;
+    this.coordinatorPort = coordinatorPort;
+    final var channel =
+        ManagedChannelBuilder.forAddress(coordinatorHost, coordinatorPort).usePlaintext().build();
     this.coordinator = CoordinatorGrpc.newFutureStub(channel);
     this.coordinatorStream = CoordinatorGrpc.newStub(channel).connect(this);
   }
@@ -73,12 +78,18 @@ public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>
           if (CODES_TO_RETRY_JOIN_CLUSTER_ON.contains(
               statusRuntimeException.getStatus().getCode())) {
             log.info(
-                "JoinCluster failed with {}, retrying...",
+                "JoinCluster [{}:{}] failed with {}, retrying...",
+                coordinatorHost,
+                coordinatorPort,
                 statusRuntimeException.getStatus().getCode());
+            Thread.sleep(1000);
             continue;
           }
           log.error(
-              "JoinCluster failed with {}, failing", statusRuntimeException.getStatus().getCode());
+              "JoinCluster [{}:{}] failed with {}, failing",
+              coordinatorHost,
+              coordinatorPort,
+              statusRuntimeException.getStatus().getCode());
           throw statusRuntimeException;
         }
 

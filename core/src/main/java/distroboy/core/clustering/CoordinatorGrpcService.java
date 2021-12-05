@@ -14,6 +14,8 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +80,7 @@ public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase 
     }
   }
 
-  private final Map<String, ClusterLobby> clusterLobbies = new HashMap<>();
+  private final ConcurrentMap<String, ClusterLobby> clusterLobbies = new ConcurrentHashMap<>();
 
   @Override
   public StreamObserver<MemberEvent> connect(StreamObserver<CoordinatorEvent> responseObserver) {
@@ -96,37 +98,39 @@ public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase 
               request.getClusterName(),
               clusterName ->
                   new ClusterLobby(request.getClusterName(), request.getExpectedMembers()));
-      if (lobby.expectedMembers != request.getExpectedMembers()) {
-        log.error(
-            "The lobby for {} expected {} members, not {}",
-            request.getClusterName(),
-            lobby.expectedMembers,
-            request.getExpectedMembers());
-        throw Status.INVALID_ARGUMENT.asException();
-      }
+      synchronized (lobby) {
+        if (lobby.expectedMembers != request.getExpectedMembers()) {
+          log.error(
+              "The lobby for {} expected {} members, not {}",
+              request.getClusterName(),
+              lobby.expectedMembers,
+              request.getExpectedMembers());
+          throw Status.INVALID_ARGUMENT.asException();
+        }
 
-      final var remoteAddressOfCurrentRequest =
-          remoteAddressProvider.getRemoteAddressOfCurrentRequest();
-      if (isNull(remoteAddressOfCurrentRequest)) {
-        log.warn("Couldn't detect remote address... instructing member to retry");
-        throw Status.UNAVAILABLE.asException();
-      }
+        final var remoteAddressOfCurrentRequest =
+            remoteAddressProvider.getRemoteAddressOfCurrentRequest();
+        if (isNull(remoteAddressOfCurrentRequest)) {
+          log.warn("Couldn't detect remote address... instructing member to retry");
+          throw Status.UNAVAILABLE.asException();
+        }
 
-      final var observedMemberDetails =
-          buildHostAndPort(remoteAddressOfCurrentRequest, request.getMemberPort());
-      lobby.add(observedMemberDetails, serverCallStreamObserver);
+        final var observedMemberDetails =
+            buildHostAndPort(remoteAddressOfCurrentRequest, request.getMemberPort());
+        lobby.add(observedMemberDetails, serverCallStreamObserver);
 
-      serverCallStreamObserver.setOnCancelHandler(
-          () -> {
-            log.error(
-                "{} - Some cluster members disconnected before the lobby was full",
-                request.getClusterName());
-            clusterLobbies.remove(request.getClusterName());
-            lobby.abort();
-          });
+        serverCallStreamObserver.setOnCancelHandler(
+            () -> {
+              log.error(
+                  "{} - Some cluster members disconnected before the lobby was full",
+                  request.getClusterName());
+              clusterLobbies.remove(request.getClusterName());
+              lobby.abort();
+            });
 
-      if (lobby.tryStartCluster()) {
-        clusterLobbies.remove(request.getClusterName());
+        if (lobby.tryStartCluster()) {
+          clusterLobbies.remove(request.getClusterName());
+        }
       }
     } catch (StatusException e) {
       log.error("joinCluster request failed - ", e);
