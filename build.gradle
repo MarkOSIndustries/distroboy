@@ -16,6 +16,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'java-library'
     apply plugin: 'com.github.sherter.google-java-format'
+    apply plugin: 'maven-publish'
 
     compileJava.dependsOn verifyGoogleJavaFormat
 
@@ -33,6 +34,62 @@ subprojects {
         }
     }
 
+    java {
+        withJavadocJar()
+        withSourcesJar()
+    }
+
+    javadoc {
+        options.addBooleanOption('html5', true)
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = "distroboy-${project.name}"
+                from components.java
+                versionMapping {
+                    usage('java-api') {
+                        fromResolutionOf('runtimeClasspath')
+                    }
+                    usage('java-runtime') {
+                        fromResolutionResult()
+                    }
+                }
+                pom {
+                    url = 'https://github.com/MarkOSIndustries/distroboy'
+                    licenses {
+                        license {
+                            name = 'MIT License'
+                            url = 'https://github.com/MarkOSIndustries/distroboy/blob/master/LICENSE'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'markosindustries'
+                            name = 'Mark Green'
+                            email = 'markosindustries@gmail.com'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/MarkOSIndustries/distroboy.git'
+                        url = 'https://github.com/MarkOSIndustries/distroboy'
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = "https://maven.pkg.github.com/MarkOSIndustries/distroboy"
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
+
     project.ext.executableJar = { String mainClass ->
         jar {
             manifest {
@@ -40,22 +97,6 @@ subprojects {
                         'Class-Path': configurations.runtimeClasspath.collect { 'dependencies/' + it.getName() }.join(' '),
                         'Main-Class': mainClass
                 )
-            }
-        }
-    }
-
-    project.ext.publishToGitHubPackages = {
-        apply plugin: 'maven-publish'
-        publishing {
-            repositories {
-                maven {
-                    name = "GitHubPackages"
-                    url = "https://maven.pkg.github.com/MarkOSIndustries/distroboy"
-                    credentials {
-                        username = System.getenv("GITHUB_ACTOR")
-                        password = System.getenv("GITHUB_TOKEN")
-                    }
-                }
             }
         }
     }

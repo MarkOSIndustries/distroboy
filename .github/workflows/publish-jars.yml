@@ -19,9 +19,9 @@ jobs:
           java-version: '15'
           distribution: 'adopt'
       - name: Build with Gradle
-        run: gradle -Pversion_string=$GITHUB_REF -Pcommit_sha=$GITHUB_SHA build
+        run: gradle -Pversion_string=${{ github.ref_name }} -Pcommit_sha=${{ github.sha }} jar
       - name: Publish to GitHub Packages
-        run: gradle -Pversion_string=$GITHUB_REF -Pcommit_sha=$GITHUB_SHA publish
+        run: gradle -Pversion_string=${{ github.ref_name }} -Pcommit_sha=${{ github.sha }} publish
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

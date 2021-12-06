@@ -19,5 +19,3 @@ dependencies {
         exclude group: 'org.apache.hadoop', module: 'hadoop-yarn-common'
     }
 }
-
-project.publishToGitHubPackages()
