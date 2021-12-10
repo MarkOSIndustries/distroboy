@@ -9,7 +9,9 @@ import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import org.slf4j.LoggerFactory;
 
+/** Support functions for configuring SLF4J to work the way distroboy wants to use it by default. */
 public interface Logging {
+  /** Set up logging via SLF4J to work distroboy's default way */
   static void configureDefault() {
     LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
     context.reset();

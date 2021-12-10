@@ -3,7 +3,19 @@ package distroboy.core;
 import distroboy.schemas.DataSourceRange;
 import java.util.ArrayList;
 
+/**
+ * Methods for working with DataSourceRange objects A DataSourceRange represents a range of data
+ * from a data source. These are used to divide a source data set up into chunks (ranges) for
+ * processing.
+ */
 public interface DataSourceRanges {
+  /**
+   * Generate DataSourceRanges for a given data set
+   *
+   * @param countOfFullSet The total data elements in the source set
+   * @param requestedNumberOfRanges The number of ranges we want to generate
+   * @return The requested set of DataSourceRanges
+   */
   static DataSourceRange[] generateRanges(long countOfFullSet, int requestedNumberOfRanges) {
     if (requestedNumberOfRanges == 0) {
       throw new IllegalArgumentException("Can't generate zero ranges");
@@ -39,6 +51,12 @@ public interface DataSourceRanges {
     return ranges.toArray(DataSourceRange[]::new);
   }
 
+  /**
+   * Describe a DataSourceRange for logging/debugging purposes
+   *
+   * @param dataSourceRange The DataSourceRange to describe
+   * @return A string representation of the given DataSourceRange
+   */
   static String describeRange(DataSourceRange dataSourceRange) {
     return "["
         + dataSourceRange.getStartInclusive()
