@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -26,26 +25,22 @@ public class KafkaTopicPartitionsIterator<K, V> implements Iterator<ConsumerReco
       KafkaOffsetSpec endOffsetsExclusiveSpec) {
     this.kafkaConsumer = kafkaConsumer;
     this.partitions = new HashSet<>(topicPartitions);
-    this.startOffsets = startOffsetsInclusiveSpec.getOffsets(kafkaConsumer, topicPartitions);
-    this.endOffsets = endOffsetsExclusiveSpec.getOffsets(kafkaConsumer, topicPartitions);
+    this.startOffsets = startOffsetsInclusiveSpec.getOffsets(kafkaConsumer, partitions);
+    this.endOffsets = endOffsetsExclusiveSpec.getOffsets(kafkaConsumer, partitions);
 
     var partitionIntersection = new HashSet<>(startOffsets.keySet());
     partitionIntersection.retainAll(endOffsets.keySet());
 
     // Remove partitions we don't have a start AND end offset for
-    topicPartitions.removeAll(
-        topicPartitions.stream()
-            .filter(p -> !partitionIntersection.contains(p))
-            .collect(Collectors.toUnmodifiableList()));
+    partitions.stream().filter(p -> !partitionIntersection.contains(p)).forEach(partitions::remove);
 
     // Remove partitions we'll never get records for
-    topicPartitions.removeAll(
-        partitionIntersection.stream()
-            .filter(p -> !(startOffsets.get(p) < endOffsets.get(p)))
-            .collect(Collectors.toUnmodifiableList()));
+    partitionIntersection.stream()
+        .filter(p -> !(startOffsets.get(p) < endOffsets.get(p)))
+        .forEach(partitions::remove);
 
-    kafkaConsumer.assign(topicPartitions);
-    for (TopicPartition topicPartition : topicPartitions) {
+    kafkaConsumer.assign(partitions);
+    for (final var topicPartition : partitions) {
       kafkaConsumer.seek(topicPartition, startOffsets.get(topicPartition));
     }
     ensureQueueDoesntRunEmpty();
