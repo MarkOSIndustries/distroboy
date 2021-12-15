@@ -2,11 +2,24 @@ package distroboy.core.iterators;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
+  static <I> IteratorWithResources<I> of(I element) {
+    return from(List.of(element).iterator());
+  }
+
   static <I> IteratorWithResources<I> from(Iterator<I> iterator) {
     return from(
         iterator,
+        () -> {
+          /* NOOP on close() */
+        });
+  }
+
+  static <I> IteratorWithResources<I> from(Iterable<I> iterable) {
+    return from(
+        iterable.iterator(),
         () -> {
           /* NOOP on close() */
         });

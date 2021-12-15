@@ -1,6 +1,10 @@
 rootProject.name = 'distroboy'
+include 'aws-s3'
 include 'coordinator'
 include 'core'
 include 'example'
-include 'schemas'
+include 'example-schemas'
+include 'kafka'
 include 'parquet'
+include 'schemas'
+

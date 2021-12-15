@@ -10,10 +10,10 @@ import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.hadoop.ParquetReader;
 
 public class ReadViaAvroFromParquetFiles<O> implements FlatMapOp<Path, O> {
-  private final Class<O> clazz;
+  private final Class<O> recordClass;
 
-  public ReadViaAvroFromParquetFiles(Class<O> clazz) {
-    this.clazz = clazz;
+  public ReadViaAvroFromParquetFiles(Class<O> recordClass) {
+    this.recordClass = recordClass;
   }
 
   @Override
@@ -22,7 +22,7 @@ public class ReadViaAvroFromParquetFiles<O> implements FlatMapOp<Path, O> {
       ParquetReader<O> reader =
           AvroParquetReader.<O>builder(
                   new SimpleInputFile(new File(input.toAbsolutePath().toString())))
-              .withDataModel(new ReflectData(clazz.getClassLoader()))
+              .withDataModel(new ReflectData(recordClass.getClassLoader()))
               .disableCompatibility()
               .build();
 

@@ -19,13 +19,14 @@ public class WriteViaAvroToParquetFiles<I> implements ReduceOp<I, List<Path>> {
   private final ParquetWriter<I> writer;
 
   // TODO: support deciding how many files per node (or records per file perhaps)
-  public WriteViaAvroToParquetFiles(Path path, Class<I> clazz) {
+  public WriteViaAvroToParquetFiles(Path path, Class<I> rowClass) {
     this.path = path;
     try {
       this.writer =
           AvroParquetWriter.<I>builder(
                   new SimpleOutputFile(new File(path.toAbsolutePath().toString())))
-              .withSchema(ReflectData.AllowNull.get().getSchema(clazz)) // generate nullable fields
+              .withSchema(
+                  ReflectData.AllowNull.get().getSchema(rowClass)) // generate nullable fields
               .withDataModel(ReflectData.get())
               .withCompressionCodec(CompressionCodecName.SNAPPY)
               .withWriteMode(OVERWRITE)

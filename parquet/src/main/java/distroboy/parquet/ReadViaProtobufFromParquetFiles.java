@@ -13,13 +13,16 @@ public class ReadViaProtobufFromParquetFiles<O extends Message> implements FlatM
   @Override
   public IteratorWithResources<O> flatMap(Path input) {
     try {
-      ParquetReader<O> reader =
-          ProtoParquetReader.<O>builder(
+      // ProtoRecordConverter re-uses a Builder internally... and you can't
+      // tell it not to, as it's newed up internally. So we need to iterate
+      // builders and call build on each one.
+      ParquetReader<O.Builder> reader =
+          ProtoParquetReader.<O.Builder>builder(
                   new SimpleInputFile(new File(input.toAbsolutePath().toString())))
               .build();
 
       return new IteratorWithResources<O>() {
-        O next = reader.read();
+        O.Builder next = reader.read();
 
         @Override
         public void close() throws Exception {
@@ -32,8 +35,9 @@ public class ReadViaProtobufFromParquetFiles<O extends Message> implements FlatM
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public O next() {
-          O result = next;
+          O result = (O) next.build();
           try {
             next = reader.read();
           } catch (IOException e) {

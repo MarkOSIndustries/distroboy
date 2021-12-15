@@ -9,6 +9,7 @@ import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 
+/** Provides the remote host address by intercepting GRPC headers */
 public class ServerCallAddressInterceptor implements ServerInterceptor, RemoteAddressProvider {
   private final ThreadLocal<String> currentRequestClientAddress =
       ThreadLocal.withInitial(() -> null);

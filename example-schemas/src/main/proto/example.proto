@@ -1,0 +1,11 @@
+syntax="proto3";
+
+package distroboy.example;
+
+option java_package = "distroboy.example.schemas";
+option java_multiple_files = true;
+
+message StringWithNumber {
+  string some_string = 1;
+  int64 some_number = 2;
+}

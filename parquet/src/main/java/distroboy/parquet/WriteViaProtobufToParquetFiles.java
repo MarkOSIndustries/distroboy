@@ -13,19 +13,20 @@ import java.util.List;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.proto.ProtoParquetWriter;
+import org.slf4j.LoggerFactory;
 
 public class WriteViaProtobufToParquetFiles<I extends Message> implements ReduceOp<I, List<Path>> {
   private final Path path;
   private final ParquetWriter<I> writer;
 
   // TODO: support deciding how many files per node (or records per file perhaps)
-  public WriteViaProtobufToParquetFiles(Path path, Class<I> clazz) {
+  public WriteViaProtobufToParquetFiles(Path path, Class<I> rowClass) {
     this.path = path;
     try {
       this.writer =
           ProtoParquetWriter.<I>builder(
                   new SimpleOutputFile(new File(path.toAbsolutePath().toString())))
-              .withMessage(clazz)
+              .withMessage(rowClass)
               .withCompressionCodec(CompressionCodecName.SNAPPY)
               .withWriteMode(OVERWRITE)
               .build();
@@ -53,6 +54,7 @@ public class WriteViaProtobufToParquetFiles<I extends Message> implements Reduce
 
   @Override
   public List<Path> reduceInput(List<Path> aggregate, I input) throws Exception {
+    LoggerFactory.getLogger("CRAZY").warn("Writing {}", input.toString());
     writer.write(input);
     return aggregate;
   }
