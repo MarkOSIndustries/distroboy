@@ -11,11 +11,19 @@ services:
       dockerfile: example/Dockerfile
       target: runtime
     environment:
-      COORDINATOR_HOST: coordinator
+      COORDINATOR_HOST: 'coordinator'
+      RUN_EXAMPLE_S3_CLIENT: 'true'
+      RUN_EXAMPLE_KAFKA_CONSUMER: 'true'
+      USE_LOCALSTACK_FOR_S3: 'true'
+      S3_ENDPOINT_OVERRIDE: 'http://localstack:4566'
   example-job-2:
     build:
       context: ..
       dockerfile: example/Dockerfile
       target: runtime
     environment:
-      COORDINATOR_HOST: coordinator
+      COORDINATOR_HOST: 'coordinator'
+      RUN_EXAMPLE_S3_CLIENT: 'true'
+      RUN_EXAMPLE_KAFKA_CONSUMER: 'true'
+      USE_LOCALSTACK_FOR_S3: 'true'
+      S3_ENDPOINT_OVERRIDE: 'http://localstack:4566'

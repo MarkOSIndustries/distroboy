@@ -17,6 +17,14 @@ public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
         });
   }
 
+  static <I> IteratorWithResources<I> from(Iterable<I> iterable) {
+    return from(
+        iterable.iterator(),
+        () -> {
+          /* NOOP on close() */
+        });
+  }
+
   static <I> IteratorWithResources<I> from(Iterator<I> iterator, AutoCloseable closeable) {
     return new IteratorWithResources<I>() {
       @Override

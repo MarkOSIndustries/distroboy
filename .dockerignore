@@ -1,0 +1,5 @@
+.github
+.idea
+*/build/*
+build/*
+*/docker-compose.yml

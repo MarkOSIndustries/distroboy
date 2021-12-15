@@ -4,15 +4,14 @@ import distroboy.core.filesystem.TempDir;
 import distroboy.core.operations.MapOp;
 import java.io.File;
 import java.io.IOException;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 public class DownloadFromS3ToHeap implements MapOp<String, byte[]> {
   private final S3Client s3Client;
   private final String bucket;
 
-  public DownloadFromS3ToHeap(String region, String bucket) {
-    this.s3Client = S3Client.builder().region(Region.of(region)).build();
+  public DownloadFromS3ToHeap(S3Client s3Client, String bucket) {
+    this.s3Client = s3Client;
     this.bucket = bucket;
   }
 

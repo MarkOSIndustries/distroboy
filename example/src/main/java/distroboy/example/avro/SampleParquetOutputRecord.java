@@ -1,8 +1,11 @@
-package distroboy.example;
+package distroboy.example.avro;
 
 public class SampleParquetOutputRecord {
-  InnerThing innerThing;
-  int someNumber;
+  public InnerThing innerThing;
+  public int someNumber;
+
+  // Needed for deserialisation
+  private SampleParquetOutputRecord() {}
 
   public SampleParquetOutputRecord(InnerThing innerThing, int someNumber) {
     this.innerThing = innerThing;
@@ -10,7 +13,10 @@ public class SampleParquetOutputRecord {
   }
 
   public static class InnerThing {
-    String thingId;
+    public String thingId;
+
+    // Needed for deserialisation
+    private InnerThing() {}
 
     public InnerThing(String thingId) {
       this.thingId = thingId;

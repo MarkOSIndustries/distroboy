@@ -3,7 +3,6 @@ package distroboy.aws.s3;
 import distroboy.core.operations.MapOp;
 import java.util.function.Function;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 public class StreamToS3<I> implements MapOp<I, I> {
@@ -13,11 +12,11 @@ public class StreamToS3<I> implements MapOp<I, I> {
   private final Function<I, RequestBody> requestBodyAccessor;
 
   public StreamToS3(
-      String region,
+      S3Client s3Client,
       String bucket,
       Function<I, String> keyAccessor,
       Function<I, RequestBody> requestBodyAccessor) {
-    this.s3Client = S3Client.builder().region(Region.of(region)).build();
+    this.s3Client = s3Client;
     this.bucket = bucket;
     this.keyAccessor = keyAccessor;
     this.requestBodyAccessor = requestBodyAccessor;

@@ -3,15 +3,10 @@ package distroboy.example;
 import distroboy.core.Cluster;
 import distroboy.core.Hashing;
 import distroboy.core.Logging;
-import distroboy.core.clustering.ClusterMemberId;
 import distroboy.core.clustering.serialisation.Serialisers;
 import distroboy.core.filesystem.DirSource;
 import distroboy.core.filesystem.ReadLinesFromFiles;
 import distroboy.core.operations.DistributedOpSequence;
-import distroboy.parquet.WriteViaAvroToParquetFiles;
-import distroboy.parquet.WriteViaProtobufToParquetFiles;
-import distroboy.schemas.HostAndPort;
-import java.nio.file.Path;
 import org.aeonbits.owner.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +24,7 @@ public class Main {
             .coordinator(config.coordinatorHost(), config.coordinatorPort())
             .memberPort(config.memberPort())
             .join()) {
+
       // Filtering and counting the lines in some files
       cluster
           .execute(
@@ -92,60 +88,13 @@ public class Main {
                     });
               });
 
-      // Writing results as avro/parquet somewhere
-      cluster
-          .execute(
-              cluster
-                  .redistributeAndGroupBy(
-                      heapPersistedLines,
-                      line -> line.length(),
-                      Hashing::integers,
-                      10,
-                      Serialisers.stringValues)
-                  .map(
-                      lineLengthWithLines ->
-                          new SampleParquetOutputRecord(
-                              new SampleParquetOutputRecord.InnerThing(
-                                  lineLengthWithLines.getValue().get(0)),
-                              lineLengthWithLines.getKey()))
-                  .reduce(
-                      new WriteViaAvroToParquetFiles<SampleParquetOutputRecord>(
-                          Path.of("/output-data/output.avro." + ClusterMemberId.self + ".parquet"),
-                          SampleParquetOutputRecord.class))
-                  .map(Object::toString)
-                  .collect(Serialisers.stringValues))
-          .onClusterLeader(
-              outputFilePath -> {
-                log.info("We wrote avro/parquet out to {}", outputFilePath);
-              });
+      if (config.runExampleS3Client()) {
+        ExampleS3Client.runExampleS3Client(cluster, config, heapPersistedLines);
+      }
 
-      // Writing results as protobuf/parquet somewhere
-      cluster
-          .execute(
-              cluster
-                  .redistributeAndGroupBy(
-                      heapPersistedLines,
-                      line -> line.length(),
-                      Hashing::integers,
-                      10,
-                      Serialisers.stringValues)
-                  .map(
-                      lineLengthWithLines ->
-                          HostAndPort.newBuilder()
-                              .setHost(lineLengthWithLines.getValue().get(0))
-                              .setPort(lineLengthWithLines.getKey())
-                              .build())
-                  .reduce(
-                      new WriteViaProtobufToParquetFiles<HostAndPort>(
-                          Path.of(
-                              "/output-data/output.protobuf." + ClusterMemberId.self + ".parquet"),
-                          HostAndPort.class))
-                  .map(Object::toString)
-                  .collect(Serialisers.stringValues))
-          .onClusterLeader(
-              outputFilePath -> {
-                log.info("We wrote protobuf/parquet out to {}", outputFilePath);
-              });
+      if (config.runExampleKafkaConsumer()) {
+        ExampleKafkaConsumer.runKafkaExample(cluster);
+      }
     }
   }
 }

@@ -53,6 +53,10 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       return new Builder<>(dataSource, operand.then(mapOp));
     }
 
+    public <O2> Builder<I, O2, List<O2>> mapWithResources(MapOpWithResources<O, O2> mapOp) {
+      return new Builder<>(dataSource, operand.then(mapOp));
+    }
+
     public <O2, O2I extends IteratorWithResources<O2>>
         IteratorBuilder<I, O2, O2I, List<O2I>> mapToIterators(MapOp<O, O2I> mapOp) {
       return new IteratorBuilder<>(dataSource, operand.then(mapOp));
