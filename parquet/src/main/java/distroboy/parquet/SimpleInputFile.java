@@ -21,7 +21,7 @@ class SimpleInputFile implements InputFile {
   @Override
   public SeekableInputStream newStream() {
     try {
-      return new SimpleSeekableInputStream(new RandomAccessFile(file, "r"));
+      return new FileBasedSeekableInputStream(new RandomAccessFile(file, "r"));
     } catch (FileNotFoundException e) {
       throw new RuntimeException(e);
     }

@@ -1,15 +1,15 @@
 package distroboy.parquet;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import org.apache.parquet.io.PositionOutputStream;
 
 public class SimplePositionOutputStream extends PositionOutputStream {
-  private final FileOutputStream fileOutputStream;
+  private final OutputStream outputStream;
   private long pos;
 
-  public SimplePositionOutputStream(FileOutputStream fileOutputStream) {
-    this.fileOutputStream = fileOutputStream;
+  public SimplePositionOutputStream(OutputStream outputStream) {
+    this.outputStream = outputStream;
     this.pos = 0;
   }
 
@@ -20,7 +20,7 @@ public class SimplePositionOutputStream extends PositionOutputStream {
 
   @Override
   public void write(int b) throws IOException {
-    fileOutputStream.write(b);
+    outputStream.write(b);
     this.pos++;
   }
 }

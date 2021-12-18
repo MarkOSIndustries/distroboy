@@ -6,7 +6,7 @@ import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public interface HashMapOp<K, V, K2, V2>
+public interface HashMapKeysAndValuesOp<K, V, K2, V2>
     extends Operation<Map.Entry<K, V>, Map.Entry<K2, V2>, Map<K2, V2>> {
   K2 mapKey(K key);
 

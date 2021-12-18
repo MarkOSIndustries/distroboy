@@ -129,8 +129,13 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       return new HashMapBuilder<>(dataSource, operand.then(hashMapValuesOp));
     }
 
-    public <K2, V2> HashMapBuilder<I, K2, V2> mapKeysAndValues(HashMapOp<K, V, K2, V2> hashMapOp) {
-      return new HashMapBuilder<>(dataSource, operand.then(hashMapOp));
+    public <K2, V2> HashMapBuilder<I, K2, V2> mapKeysAndValues(
+        HashMapKeysAndValuesOp<K, V, K2, V2> hashMapKeysAndValuesOp) {
+      return new HashMapBuilder<>(dataSource, operand.then(hashMapKeysAndValuesOp));
+    }
+
+    public <O> Builder<I, O, List<O>> map(HashMapToListOp<K, V, O> mapOp) {
+      return new Builder<>(dataSource, operand.then(mapOp));
     }
   }
 }

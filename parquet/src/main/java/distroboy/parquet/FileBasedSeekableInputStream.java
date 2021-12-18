@@ -5,10 +5,10 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import org.apache.parquet.io.SeekableInputStream;
 
-class SimpleSeekableInputStream extends SeekableInputStream {
+class FileBasedSeekableInputStream extends SeekableInputStream {
   private final RandomAccessFile file;
 
-  SimpleSeekableInputStream(RandomAccessFile file) {
+  FileBasedSeekableInputStream(RandomAccessFile file) {
     this.file = file;
   }
 

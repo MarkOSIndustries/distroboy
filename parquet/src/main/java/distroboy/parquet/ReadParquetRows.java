@@ -3,16 +3,14 @@ package distroboy.parquet;
 import distroboy.core.iterators.FlatMappingIteratorWithResources;
 import distroboy.core.iterators.IteratorWithResources;
 import distroboy.core.operations.FlatMapOp;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
+import org.apache.parquet.io.InputFile;
 
-public class ReadParquetRowsFromFiles implements FlatMapOp<Path, ParquetGroupInspector> {
+public class ReadParquetRows implements FlatMapOp<InputFile, ParquetGroupInspector> {
   @Override
-  public IteratorWithResources<ParquetGroupInspector> flatMap(Path input) {
+  public IteratorWithResources<ParquetGroupInspector> flatMap(InputFile input) {
     try {
-      final var rowGroupIterator =
-          new ParquetFileRowGroupIterator(new File(input.toAbsolutePath().toString()));
+      final var rowGroupIterator = new ParquetRowGroupIterator(input);
       return new FlatMappingIteratorWithResources<>(
           rowGroupIterator,
           rowGroup -> new ParquetRowIterator(rowGroupIterator.getSchema(), rowGroup));

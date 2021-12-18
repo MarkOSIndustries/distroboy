@@ -4,6 +4,7 @@ dependencies {
     implementation project(':parquet')
     implementation project(':kafka')
     implementation project(':aws-s3')
+    implementation project(':aws-s3-parquet')
     implementation group: 'io.grpc', name: 'grpc-netty', version: '1.38.1'
     implementation group: 'io.perfmark', name: 'perfmark-api', version: '0.24.0'
     implementation group: 'org.aeonbits.owner', name: 'owner', version: '1.0.12'
