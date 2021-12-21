@@ -10,7 +10,7 @@ buildscript {
 }
 
 subprojects {
-    group 'distroboy'
+    group 'com.markosindustries.distroboy'
     version "${version_string}"
 
     apply plugin: 'java'
@@ -27,7 +27,7 @@ subprojects {
     jar {
         manifest {
             attributes (
-                    'Implementation-Title': "distroboy-${project.name}",
+                    'Implementation-Title': "${project.group}.${project.name}",
                     'Implementation-Version': "${version_string}",
                     'DistroBoy-CommitSHA': "${commit_sha}"
             )
@@ -46,7 +46,7 @@ subprojects {
     publishing {
         publications {
             mavenJava(MavenPublication) {
-                artifactId = "distroboy-${project.name}"
+                artifactId = "${project.name}"
                 from components.java
                 versionMapping {
                     usage('java-api') {

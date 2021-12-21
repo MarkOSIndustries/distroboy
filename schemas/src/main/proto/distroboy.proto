@@ -2,7 +2,7 @@ syntax="proto3";
 
 package distroboy;
 
-option java_package = "distroboy.schemas";
+option java_package = "com.markosindustries.distroboy.schemas";
 option java_multiple_files = true;
 
 import 'google/protobuf/any.proto';
