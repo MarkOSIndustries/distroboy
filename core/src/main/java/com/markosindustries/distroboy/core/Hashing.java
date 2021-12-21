@@ -4,6 +4,7 @@ import com.google.protobuf.MessageLite;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+/** Useful hashing functions for grouping by common types. */
 public interface Hashing {
   static int integers(int integer) {
     return com.google.common.hash.Hashing.murmur3_32().hashInt(integer).asInt();

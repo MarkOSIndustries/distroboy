@@ -1,5 +1,11 @@
 package com.markosindustries.distroboy.core;
 
+/**
+ * A wrapper type to carry along an AutoCloseable resource with the result, so that cleanup can
+ * happen once iteration is finished on the node.
+ *
+ * @param <T> The type of result
+ */
 public class ResultWithResource<T> {
   private final T result;
   private final AutoCloseable resource;

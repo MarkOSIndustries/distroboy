@@ -240,8 +240,7 @@ public final class Cluster implements AutoCloseable {
   }
 
   /**
-   * A convenience method which will call @see
-   * com.markosindustries.distroboy.core.Cluster#redistributeByHash and then apply a groupBy
+   * A convenience method which will call {@link #redistributeByHash} and then apply a groupBy
    * operation as the first operation on the newly generated DistributedOpSequence
    *
    * @param dataReferences The references to the data to redistribute

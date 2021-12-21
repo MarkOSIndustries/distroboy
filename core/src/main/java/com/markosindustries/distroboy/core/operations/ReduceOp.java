@@ -7,6 +7,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * A high level interface for any operation which takes a distributed data set and reduces it down
+ * to a single aggregate
+ *
+ * @param <I> The type of the input data set items
+ * @param <O> The type of the output data set items
+ */
 public interface ReduceOp<I, O> extends Operation<I, O, O> {
   default O initAggregate() {
     return null;

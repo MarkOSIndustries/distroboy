@@ -1,8 +1,6 @@
 package com.markosindustries.distroboy.aws.s3;
 
-import com.markosindustries.distroboy.core.filesystem.TempDir;
 import com.markosindustries.distroboy.core.operations.MapOp;
-import java.io.File;
 import java.io.IOException;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -18,7 +16,6 @@ public class DownloadFromS3ToHeap implements MapOp<String, byte[]> {
   @Override
   public byte[] map(String input) {
     try {
-      final var path = TempDir.tempFile(input.replace(File.separator, "_"));
       return s3Client.getObject(req -> req.bucket(bucket).key(input)).readAllBytes();
     } catch (IOException e) {
       throw new RuntimeException(e);
