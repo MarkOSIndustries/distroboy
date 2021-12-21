@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+/** Provides static helper methods for converting {@link Iterator}s to other types */
 public interface IteratorTo {
   static <T> List<T> list(IteratorWithResources<T> it) throws Exception {
     try (it) {

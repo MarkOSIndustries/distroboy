@@ -7,6 +7,18 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Represents a place data can be loaded from for a {@link DistributedOpSequence}. The only
+ * requirements are that
+ *
+ * <ul>
+ *   <li>each node in the cluster will see the same data set
+ *   <li>we know how many items are in the data set
+ *   <li>we can load a requested index range of the data
+ * </ul>
+ *
+ * @param <I>
+ */
 public interface DataSource<I> extends Operand<I, List<I>> {
   long countOfFullSet();
 

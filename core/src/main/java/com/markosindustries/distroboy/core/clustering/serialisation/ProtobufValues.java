@@ -5,6 +5,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import com.markosindustries.distroboy.schemas.Value;
 
+/** Default serialiser for protobuf {@link MessageLite}s */
 public class ProtobufValues<T extends MessageLite> implements Serialiser<T> {
   private final ParseFrom<T> parseFrom;
 

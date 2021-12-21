@@ -21,7 +21,7 @@ public interface DistributedOpResult<T> {
    * If the current node is the cluster leader, returns the result of the distributed operation.
    * Otherwise throws an {@code UnsupportedOperationException}
    *
-   * @return
+   * @return The result of the distributed operation.
    */
   T getResult();
 
@@ -47,10 +47,15 @@ public interface DistributedOpResult<T> {
     }
   }
 
+  /**
+   * The cluster leader's result (which actually contains the result)
+   *
+   * @param <T> The type of the result of the distributed operation
+   */
   class LeaderResult<T> implements DistributedOpResult<T> {
     private final T result;
 
-    public LeaderResult(T result) {
+    LeaderResult(T result) {
       this.result = result;
     }
 
@@ -70,6 +75,11 @@ public interface DistributedOpResult<T> {
     }
   }
 
+  /**
+   * The non-leader cluster members result (which is merely a signal that the operation is complete)
+   *
+   * @param <T> The type of the result of the distributed operation
+   */
   class WorkerResult<T> implements DistributedOpResult<T> {
     @Override
     public boolean isClusterLeader() {

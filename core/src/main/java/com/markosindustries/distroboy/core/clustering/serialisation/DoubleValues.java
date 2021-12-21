@@ -2,6 +2,7 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 
 import com.markosindustries.distroboy.schemas.Value;
 
+/** Default serialiser for {@link Double}s */
 public class DoubleValues implements Serialiser<Double> {
   @Override
   public Value serialise(Double value) {

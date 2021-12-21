@@ -3,6 +3,7 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 import com.google.protobuf.ByteString;
 import com.markosindustries.distroboy.schemas.Value;
 
+/** Default serialiser for byte arrays */
 public class ByteArrayValues implements Serialiser<byte[]> {
   @Override
   public Value serialise(byte[] value) {

@@ -4,6 +4,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * An {@link IteratorWithResources} which will take elements in the wrapped iterator and apply a map
+ * operation to them
+ *
+ * @param <I> The type of elements in the input {@link IteratorWithResources}
+ * @param <O> The type of elements in the output {@link IteratorWithResources}
+ */
 public class MappingIteratorWithResources<I, O> implements IteratorWithResources<O> {
   private final IteratorWithResources<I> wrapped;
   private final Function<I, O> mapper;

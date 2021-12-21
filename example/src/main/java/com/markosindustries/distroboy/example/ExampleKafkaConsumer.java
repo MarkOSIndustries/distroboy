@@ -59,6 +59,11 @@ public interface ExampleKafkaConsumer {
                     new KafkaTopicPartitionsSource(
                         kafkaConsumer, List.of("distroboy.example.topic")))
                 .flatMap(
+                    // TODO: This is an example only. In a real job, you'd likely want to use
+                    //  timestamp-based offsets in the past if possible, so that you can ensure
+                    //  that all nodes see a consistent view of the data. Earliest/Latest are
+                    //  only really safe when the topic isn't being cleaned or added to when the
+                    //  distributed operation is running
                     new ReadKafkaTopicPartitionRange<>(
                         kafkaConsumer, new EarliestKafkaOffsetSpec(), new LatestKafkaOffsetSpec()))
                 .count())

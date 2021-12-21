@@ -11,6 +11,16 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 
+/**
+ * Provides an {@link Iterator} interface to the data in Kafka for a given set of {@link
+ * TopicPartition}s. Reads from the starting offsets (inclusive) to the ending offsets (exclusive)
+ * specified.
+ *
+ * @param <K> The type of keys the {@link org.apache.kafka.clients.consumer.KafkaConsumer} will
+ *     deserialise
+ * @param <V> The type of values the {@link org.apache.kafka.clients.consumer.KafkaConsumer} will
+ *     deserialise
+ */
 public class KafkaTopicPartitionsIterator<K, V> implements Iterator<ConsumerRecord<K, V>> {
   private final Consumer<K, V> kafkaConsumer;
   private final Set<TopicPartition> partitions;
@@ -18,6 +28,13 @@ public class KafkaTopicPartitionsIterator<K, V> implements Iterator<ConsumerReco
   private final Map<TopicPartition, Long> endOffsets;
   private final LinkedList<ConsumerRecord<K, V>> records = new LinkedList<>();
 
+  /**
+   * @param kafkaConsumer A {@link org.apache.kafka.clients.consumer.KafkaConsumer} to communicate
+   *     with Kafka via
+   * @param topicPartitions The set of {@link TopicPartition}s to iterate records from
+   * @param startOffsetsInclusiveSpec The starting offset spec (inclusive)
+   * @param endOffsetsExclusiveSpec The end offset spec (exclusive)
+   */
   public KafkaTopicPartitionsIterator(
       Consumer<K, V> kafkaConsumer,
       Collection<TopicPartition> topicPartitions,

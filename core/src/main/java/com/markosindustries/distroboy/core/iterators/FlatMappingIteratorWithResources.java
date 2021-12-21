@@ -2,6 +2,13 @@ package com.markosindustries.distroboy.core.iterators;
 
 import java.util.function.Function;
 
+/**
+ * An {@link IteratorWithResources} which will take elements in the wrapped iterator and apply a
+ * flatmap operation to them
+ *
+ * @param <I> The type of elements in the input {@link IteratorWithResources}
+ * @param <O> The type of elements in the output {@link IteratorWithResources}
+ */
 public class FlatMappingIteratorWithResources<I, O> implements IteratorWithResources<O> {
   private final IteratorWithResources<I> wrapped;
   private final Function<I, IteratorWithResources<O>> flatten;

@@ -4,6 +4,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.function.Function;
 
+/**
+ * An iterator which will take elements in the wrapped iterator and apply a flatmap operation to
+ * them
+ *
+ * @param <I> The type of elements in the input {@link Iterator}
+ * @param <O> The type of elements in the output {@link Iterator}
+ */
 public class FlatMappingIterator<I, O> implements Iterator<O> {
   private final Iterator<I> wrapped;
   private final Function<I, Iterator<O>> flatten;

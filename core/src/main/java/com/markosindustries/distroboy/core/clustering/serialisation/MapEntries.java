@@ -6,6 +6,7 @@ import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 
+/** Default serialiser for {@link Map.Entry}s */
 public class MapEntries<K, V> implements Serialiser<Map.Entry<K, V>> {
   private final Serialiser<K> keySerialiser;
   private final Serialiser<V> valueSerialiser;

@@ -30,6 +30,7 @@ public final class Coordinator {
    *
    * @param port The port to run the coordinator on
    * @throws IOException If we can't start the coordinator RPC interface
+   * @return A future which will complete once the server has shut down.
    */
   public static CompletableFuture<Void> runAsyncUntilShutdown(int port) throws IOException {
     final var shutdownFuture = new CompletableFuture<Void>();
@@ -44,6 +45,7 @@ public final class Coordinator {
    * @param port The port to run the coordinator on
    * @param stop The future whose completion signals we should stop the coordinator
    * @throws IOException If we can't start the coordinator RPC interface
+   * @return A future which will complete once the server has shut down.
    */
   public static CompletableFuture<Void> runAsyncUntil(int port, CompletableFuture<Void> stop)
       throws IOException {
@@ -65,6 +67,7 @@ public final class Coordinator {
    *
    * @param port The port to run the coordinator on
    * @throws IOException If we can't start the coordinator RPC interface
+   * @return A reference to the {@link Server} which has been started.
    */
   public static Server runAsync(int port) throws IOException {
     final var remoteAddressInterceptor = new ServerCallAddressInterceptor();

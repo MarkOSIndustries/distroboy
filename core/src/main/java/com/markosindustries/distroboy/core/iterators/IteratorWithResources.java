@@ -4,6 +4,12 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * An {@link Iterator} which also has an {@link AutoCloseable} which should be {@link
+ * AutoCloseable#close()}d when all items have been iterated.
+ *
+ * @param <I> The type of items in the iterator
+ */
 public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
   static <I> IteratorWithResources<I> of(I element) {
     return from(List.of(element).iterator());

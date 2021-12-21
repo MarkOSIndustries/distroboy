@@ -2,6 +2,7 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 
 import com.google.protobuf.MessageLite;
 
+/** Provides singletons and factory methods for default serialisers */
 public interface Serialisers {
   BooleanValues booleanValues = new BooleanValues();
   IntegerValues integerValues = new IntegerValues();

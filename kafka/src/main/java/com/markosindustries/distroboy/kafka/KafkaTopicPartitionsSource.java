@@ -10,10 +10,19 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 
+/**
+ * A {@link DataSource} which will yield all TopicPartitions available on the Kafka cluster for a
+ * given set of topics.
+ */
 public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartition>> {
   private final Collection<String> topics;
   private final List<TopicPartition> topicPartitions;
 
+  /**
+   * @param kafkaConsumer A {@link org.apache.kafka.clients.consumer.KafkaConsumer} to communicate
+   *     with Kafka via
+   * @param topics The set of topics to retrieve {@link TopicPartition}s for
+   */
   public KafkaTopicPartitionsSource(Consumer<?, ?> kafkaConsumer, Collection<String> topics) {
     this.topics = topics;
     this.topicPartitions =

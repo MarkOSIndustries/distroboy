@@ -97,7 +97,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     return members;
   }
 
-  public <O> ConnectionToClusterMember getMember(UUID memberId) {
+  public ConnectionToClusterMember getMember(UUID memberId) {
     return memberIdentities.get(memberId);
   }
 

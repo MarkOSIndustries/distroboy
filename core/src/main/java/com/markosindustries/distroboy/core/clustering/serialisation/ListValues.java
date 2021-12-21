@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/** Default serialiser for {@link List}s */
 public class ListValues<T> implements Serialiser<List<T>> {
   private final Serialiser<T> serialiser;
 

@@ -2,6 +2,7 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 
 import com.markosindustries.distroboy.schemas.Value;
 
+/** Default serialiser for {@link Boolean}s */
 public class BooleanValues implements Serialiser<Boolean> {
   @Override
   public Value serialise(Boolean value) {
