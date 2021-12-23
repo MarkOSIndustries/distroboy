@@ -82,14 +82,6 @@ subprojects {
         }
         repositories {
             maven {
-                name = "GitHubPackages"
-                url = "https://maven.pkg.github.com/MarkOSIndustries/distroboy"
-                credentials {
-                    username = System.getenv("GITHUB_ACTOR")
-                    password = System.getenv("GITHUB_TOKEN")
-                }
-            }
-            maven {
                 name = "OSSRH"
                 url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
                 credentials {
