@@ -2,5 +2,3 @@ dependencies {
     api project(':aws-s3')
     api project(':parquet')
 }
-
-description = "DistroBoy support library for interacting Parquet files stored in AWS S3"

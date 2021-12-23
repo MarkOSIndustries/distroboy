@@ -1,6 +1,7 @@
 .idea
 .gradle
-gradle*
+gradle/*
+gradlew*
 build
 *.iml
 schemas/gen

@@ -58,5 +58,3 @@ idea {
 //    sourceDirs += file("$projectDir/something/else/");
     }
 }
-
-tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }

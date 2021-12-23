@@ -12,6 +12,3 @@ dependencies {
 
 project.executableJar('com.markosindustries.distroboy.example.Main')
 project.distributeWithDependencies()
-
-tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }
-tasks.withType(Javadoc).configureEach { it.enabled = false }

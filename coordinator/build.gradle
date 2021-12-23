@@ -4,9 +4,5 @@ dependencies {
     implementation group: 'io.perfmark', name: 'perfmark-api', version: '0.24.0'
 }
 
-
 project.executableJar('com.markosindustries.distroboy.coordinator.Main')
 project.distributeWithDependencies()
-
-tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }
-tasks.withType(Javadoc).configureEach { it.enabled = false }
