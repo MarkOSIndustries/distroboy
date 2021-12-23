@@ -21,7 +21,7 @@ jobs:
       - name: Build with Gradle
         run: gradle -Pversion_string=${{ github.ref_name }} -Pcommit_sha=${{ github.sha }} jar
       - name: Publish to GitHub Packages
-        run: gradle -Pversion_string=${{ github.ref_name }} -Pcommit_sha=${{ github.sha }} publish
+        run: gradle -Pversion_string=${{ github.ref_name }} -Pcommit_sha=${{ github.sha }} publishAllPublicationsToGitHubPackagesRepository
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

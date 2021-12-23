@@ -19,3 +19,5 @@ dependencies {
         exclude group: 'org.apache.hadoop', module: 'hadoop-yarn-common'
     }
 }
+
+description = "DistroBoy support library for interacting with Parquet files"

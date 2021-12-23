@@ -17,6 +17,7 @@ subprojects {
     apply plugin: 'java-library'
     apply plugin: 'com.github.sherter.google-java-format'
     apply plugin: 'maven-publish'
+    apply plugin: 'signing'
 
     compileJava.dependsOn verifyGoogleJavaFormat
 
@@ -47,6 +48,7 @@ subprojects {
         publications {
             mavenJava(MavenPublication) {
                 artifactId = "${project.name}"
+                description = "${project.description}"
                 from components.java
                 versionMapping {
                     usage('java-api') {
@@ -87,7 +89,19 @@ subprojects {
                     password = System.getenv("GITHUB_TOKEN")
                 }
             }
+            maven {
+                name = "OSSRH"
+                url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                credentials {
+                    username = System.getenv("OSSRH_USERNAME")
+                    password = System.getenv("OSSRH_PASSWORD")
+                }
+            }
         }
+    }
+
+    signing {
+        sign publishing.publications.mavenJava
     }
 
     project.ext.executableJar = { String mainClass ->

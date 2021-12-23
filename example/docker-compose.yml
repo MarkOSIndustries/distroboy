@@ -3,13 +3,13 @@ services:
   coordinator:
     build:
       context: ..
-      dockerfile: coordinator/Dockerfile
-      target: runtime
+      dockerfile: Dockerfile
+      target: coordinator_runtime
   example-job-1:
     build:
       context: ..
-      dockerfile: example/Dockerfile
-      target: runtime
+      dockerfile: Dockerfile
+      target: example_runtime
     environment:
       COORDINATOR_HOST: 'coordinator'
       RUN_EXAMPLE_S3_CLIENT: 'true'
@@ -19,8 +19,8 @@ services:
   example-job-2:
     build:
       context: ..
-      dockerfile: example/Dockerfile
-      target: runtime
+      dockerfile: Dockerfile
+      target: example_runtime
     environment:
       COORDINATOR_HOST: 'coordinator'
       RUN_EXAMPLE_S3_CLIENT: 'true'
