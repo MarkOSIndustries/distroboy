@@ -6,7 +6,6 @@ import com.google.common.base.Strings;
 import com.markosindustries.distroboy.aws.s3.DownloadFromS3ToDisk;
 import com.markosindustries.distroboy.aws.s3.S3KeysSource;
 import com.markosindustries.distroboy.aws.s3.S3ObjectsSource;
-import com.markosindustries.distroboy.aws.s3.UploadFromDiskToS3;
 import com.markosindustries.distroboy.aws.s3.parquet.S3ObjectInputFile;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Hashing;
@@ -17,9 +16,10 @@ import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.example.avro.SampleParquetOutputRecord;
 import com.markosindustries.distroboy.example.localstack.TempSdkHttpClientTrailingSlashAppender;
 import com.markosindustries.distroboy.example.schemas.StringWithNumber;
+import com.markosindustries.distroboy.parquet.ParquetAvroFilesWriterStrategy;
 import com.markosindustries.distroboy.parquet.ReadViaAvroFromParquetFiles;
 import com.markosindustries.distroboy.parquet.ReadViaProtobufFromParquet;
-import com.markosindustries.distroboy.parquet.WriteViaAvroToParquetFiles;
+import com.markosindustries.distroboy.parquet.WriteToParquet;
 import com.markosindustries.distroboy.schemas.DataReference;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -68,21 +68,26 @@ public interface ExampleS3Client {
                                 lineLengthWithLines.getValue().get(0)),
                             lineLengthWithLines.getKey()))
                 .reduce(
-                    new WriteViaAvroToParquetFiles<SampleParquetOutputRecord>(
-                        Path.of("/output-data/output.avro." + ClusterMemberId.self + ".parquet"),
-                        SampleParquetOutputRecord.class))
+                    new WriteToParquet<SampleParquetOutputRecord, Path>(
+                        new ParquetAvroFilesWriterStrategy<>(
+                            (_ignored) -> {
+                              return Path.of(
+                                  "/output-data/output.avro." + ClusterMemberId.self + ".parquet");
+                            },
+                            SampleParquetOutputRecord.class)))
                 .flatMap(IteratorWithResources::from)
                 .map(
-                    new UploadFromDiskToS3<>(
-                        s3Client,
-                        "distroboy-bucket",
-                        path -> "avro/" + path.getFileName(),
-                        path -> path))
+                    path -> {
+                      s3Client.putObject(
+                          req -> req.bucket("distroboy-bucket").key("avro/" + path.getFileName()),
+                          path);
+                      return path;
+                    })
                 .map(Object::toString)
                 .collect(Serialisers.stringValues))
         .onClusterLeader(
-            outputFilePath -> {
-              log.info("We wrote avro/parquet out to {}", outputFilePath);
+            outputFilePaths -> {
+              log.info("We wrote avro/parquet out to {}", outputFilePaths);
             });
 
     // Read the parquet/avro records back from S3 and count them
@@ -90,9 +95,7 @@ public interface ExampleS3Client {
         .execute(
             DistributedOpSequence.readFrom(new S3KeysSource(s3Client, "distroboy-bucket", "avro"))
                 .mapWithResources(new DownloadFromS3ToDisk(s3Client, "distroboy-bucket"))
-                .flatMap(
-                    new ReadViaAvroFromParquetFiles<SampleParquetOutputRecord>(
-                        SampleParquetOutputRecord.class))
+                .flatMap(new ReadViaAvroFromParquetFiles<>(SampleParquetOutputRecord.class))
                 .map(record -> record.innerThing.thingId + " " + record.someNumber)
                 .collect(Serialisers.stringValues))
         .onClusterLeader(
@@ -133,8 +136,8 @@ public interface ExampleS3Client {
                     })
                 .collect(Serialisers.stringValues))
         .onClusterLeader(
-            s3Key -> {
-              log.info("We uploaded protobuf/parquet to {}", s3Key);
+            s3Keys -> {
+              log.info("We uploaded protobuf/parquet to {}", s3Keys);
             });
 
     // Read the parquet/protobuf records back from S3 using range requests, which

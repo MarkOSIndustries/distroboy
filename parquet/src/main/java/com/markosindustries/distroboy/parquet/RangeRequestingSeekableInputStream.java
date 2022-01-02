@@ -10,7 +10,8 @@ import org.slf4j.LoggerFactory;
 
 // TODO: document that this is for S3 basically, and example it up
 public class RangeRequestingSeekableInputStream extends SeekableInputStream {
-  private static Logger log = LoggerFactory.getLogger(RangeRequestingSeekableInputStream.class);
+  private static final Logger log =
+      LoggerFactory.getLogger(RangeRequestingSeekableInputStream.class);
 
   private final RangeRetriever rangeRetriever;
   private final long bytesAvailable;

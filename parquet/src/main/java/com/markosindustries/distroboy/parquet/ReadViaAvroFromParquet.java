@@ -1,25 +1,25 @@
 package com.markosindustries.distroboy.parquet;
 
-import com.google.protobuf.Message;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.FlatMapOp;
 import java.io.IOException;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.io.InputFile;
-import org.apache.parquet.proto.ProtoParquetReader;
 
-public class ReadViaProtobufFromParquet<I extends InputFile, O extends Message>
-    implements FlatMapOp<I, O> {
+public class ReadViaAvroFromParquet<I extends InputFile, O> implements FlatMapOp<I, O> {
+  private final Class<O> rowClass;
+
+  public ReadViaAvroFromParquet(Class<O> rowClass) {
+    this.rowClass = rowClass;
+  }
+
   @Override
   public IteratorWithResources<O> flatMap(I input) {
     try {
-      // ProtoRecordConverter re-uses a Builder internally... and you can't
-      // tell it not to, as it's newed up internally. So we need to iterate
-      // O.Builders and call build on each one.
-      ParquetReader<O.Builder> reader = ProtoParquetReader.<O.Builder>builder(input).build();
+      ParquetReader<O> reader = ParquetAvro.parquetAvroReader(input, rowClass);
 
       return new IteratorWithResources<O>() {
-        O.Builder next = reader.read();
+        O next = reader.read();
 
         @Override
         public void close() throws Exception {
@@ -32,9 +32,8 @@ public class ReadViaProtobufFromParquet<I extends InputFile, O extends Message>
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public O next() {
-          O result = (O) next.build();
+          O result = next;
           try {
             next = reader.read();
           } catch (IOException e) {

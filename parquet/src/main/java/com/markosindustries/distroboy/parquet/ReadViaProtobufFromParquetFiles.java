@@ -7,9 +7,14 @@ import java.io.File;
 import java.nio.file.Path;
 
 public class ReadViaProtobufFromParquetFiles<O extends Message> implements FlatMapOp<Path, O> {
+  private final ReadViaProtobufFromParquet<SimpleInputFile, O> wrapped;
+
+  public ReadViaProtobufFromParquetFiles() {
+    this.wrapped = new ReadViaProtobufFromParquet<>();
+  }
+
   @Override
   public IteratorWithResources<O> flatMap(Path input) {
-    return new ReadViaProtobufFromParquet<SimpleInputFile, O>()
-        .flatMap(new SimpleInputFile(new File(input.toAbsolutePath().toString())));
+    return wrapped.flatMap(new SimpleInputFile(new File(input.toAbsolutePath().toString())));
   }
 }
