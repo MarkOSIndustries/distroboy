@@ -1,0 +1,19 @@
+plugins {
+    id 'distroboy.common'
+    id 'com.github.spotbugs'
+    id 'com.github.sherter.google-java-format'
+}
+
+compileJava.dependsOn verifyGoogleJavaFormat
+
+googleJavaFormat {
+    toolVersion '1.9'
+}
+
+dependencies {
+    implementation group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.5.2'
+}
+
+spotbugs {
+    excludeFilter = project.parent.file("spotbugs.excludes.xml")
+}

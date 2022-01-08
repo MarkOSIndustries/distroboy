@@ -14,8 +14,7 @@ public class ReadParquetRowsFromFiles implements FlatMapOp<Path, ParquetGroupIns
       final var rowGroupIterator =
           new ParquetFileRowGroupIterator(new File(input.toAbsolutePath().toString()));
       return new FlatMappingIteratorWithResources<>(
-          rowGroupIterator,
-          rowGroup -> new ParquetRowIterator(rowGroupIterator.getSchema(), rowGroup));
+          rowGroupIterator, rowGroupIterator::rowIterator);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

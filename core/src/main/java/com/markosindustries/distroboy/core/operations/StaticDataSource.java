@@ -1,5 +1,7 @@
 package com.markosindustries.distroboy.core.operations;
 
+import static java.util.Collections.unmodifiableCollection;
+
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import java.util.Collection;
 
@@ -17,7 +19,7 @@ public class StaticDataSource<I> implements DataSource<I> {
   private final Collection<I> data;
 
   public StaticDataSource(Collection<I> data) {
-    this.data = data;
+    this.data = unmodifiableCollection(data);
   }
 
   @Override

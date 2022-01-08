@@ -1,8 +1,8 @@
-dependencies {
-    implementation project(':core')
-    implementation group: 'io.grpc', name: 'grpc-netty', version: '1.38.1'
-    implementation group: 'io.perfmark', name: 'perfmark-api', version: '0.24.0'
+plugins {
+    id 'distroboy.executable-jar-with-dependencies'
+    id 'distroboy.linting'
 }
 
-project.executableJar('com.markosindustries.distroboy.coordinator.Main')
-project.distributeWithDependencies()
+dependencies {
+    implementation project(':core')
+}

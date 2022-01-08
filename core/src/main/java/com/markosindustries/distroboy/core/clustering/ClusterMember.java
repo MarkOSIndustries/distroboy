@@ -1,6 +1,7 @@
 package com.markosindustries.distroboy.core.clustering;
 
 import static com.markosindustries.distroboy.core.DataSourceRanges.describeRange;
+import static com.markosindustries.distroboy.core.DataSourceRanges.generateRanges;
 import static com.markosindustries.distroboy.core.clustering.ClusterMemberId.uuidAsBytes;
 import static com.markosindustries.distroboy.core.clustering.ClusterMemberId.uuidFromBytes;
 import static java.util.stream.Collectors.toUnmodifiableMap;
@@ -8,6 +9,7 @@ import static java.util.stream.Collectors.toUnmodifiableMap;
 import com.google.protobuf.Empty;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
+import com.markosindustries.distroboy.core.operations.DataSource;
 import com.markosindustries.distroboy.schemas.ClusterMemberGrpc;
 import com.markosindustries.distroboy.schemas.ClusterMemberIdentity;
 import com.markosindustries.distroboy.schemas.ClusterMembers;
@@ -22,11 +24,14 @@ import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -93,11 +98,30 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     return isLeader;
   }
 
-  public ConnectionToClusterMember[] getMembers() {
-    return members;
+  public <I> List<CompletableFuture<Iterator<Value>>> distributeDataSource(
+      DataSource<I> dataSource) {
+    final var dataSourceRanges = generateRanges(dataSource.countOfFullSet(), members.length);
+    final var memberJobs =
+        new ArrayList<CompletableFuture<Iterator<Value>>>(dataSourceRanges.length);
+    for (int i = 0; i < dataSourceRanges.length; i++) {
+      final var member = members[i];
+      final var range = dataSourceRanges[i];
+      memberJobs.add(CompletableFuture.supplyAsync(() -> member.process(range)));
+    }
+    return memberJobs;
   }
 
-  public ConnectionToClusterMember getMember(UUID memberId) {
+  public Iterator<Value> retrieveRangeFromMember(
+      UUID memberId, DataReferenceRange dataReferenceRange) {
+    return getMember(memberId).retrieveRange(dataReferenceRange);
+  }
+
+  public Iterator<Value> retrieveByHashFromMember(
+      UUID memberId, DataReferenceHashSpec dataReferenceHashSpec) {
+    return getMember(memberId).retrieveByHash(dataReferenceHashSpec);
+  }
+
+  private ConnectionToClusterMember getMember(UUID memberId) {
     return memberIdentities.get(memberId);
   }
 

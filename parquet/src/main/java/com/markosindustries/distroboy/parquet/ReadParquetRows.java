@@ -12,8 +12,7 @@ public class ReadParquetRows implements FlatMapOp<InputFile, ParquetGroupInspect
     try {
       final var rowGroupIterator = new ParquetRowGroupIterator(input);
       return new FlatMappingIteratorWithResources<>(
-          rowGroupIterator,
-          rowGroup -> new ParquetRowIterator(rowGroupIterator.getSchema(), rowGroup));
+          rowGroupIterator, rowGroupIterator::rowIterator);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

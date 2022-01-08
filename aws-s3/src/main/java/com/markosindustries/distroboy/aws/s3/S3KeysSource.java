@@ -11,7 +11,7 @@ public class S3KeysSource implements DataSource<String> {
   private final String bucket;
   private final String keyPrefix;
 
-  public S3KeysSource(S3Client s3Client, String bucket, String keyPrefix) {
+  public S3KeysSource(final S3Client s3Client, final String bucket, final String keyPrefix) {
     this.s3Client = s3Client;
     this.bucket = bucket;
     this.keyPrefix = keyPrefix;

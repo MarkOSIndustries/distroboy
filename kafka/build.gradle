@@ -1,3 +1,8 @@
+plugins {
+    id 'distroboy.published-library'
+    id 'distroboy.linting'
+}
+
 dependencies {
     api project(':core')
 

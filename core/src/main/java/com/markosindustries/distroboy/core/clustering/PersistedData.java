@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 public class PersistedData<I> {
-  public static ConcurrentMap<UUID, PersistedData<?>> STORED_REFERENCES = new ConcurrentHashMap<>();
+  public static final ConcurrentMap<UUID, PersistedData<?>> STORED_REFERENCES =
+      new ConcurrentHashMap<>();
 
   final Supplier<Iterator<I>> iteratorSupplier;
   final Serialiser<I> serialiser;

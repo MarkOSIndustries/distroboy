@@ -45,7 +45,7 @@ public class PrefetchedFooterSeekableInputStream extends SeekableInputStream {
 
       if (footerIndex + len <= prefetchedFooter.length) {
         System.arraycopy(prefetchedFooter, footerIndex, bytes, start, len);
-        inner.skip(len);
+        inner.seek(inner.getPos() + len);
         return;
       } else {
         throw new EOFException("Read extends past prefetched footer length");
@@ -62,7 +62,7 @@ public class PrefetchedFooterSeekableInputStream extends SeekableInputStream {
       final var bytesToRead = buf.remaining();
       if (footerIndex + bytesToRead <= prefetchedFooter.length) {
         buf.put(prefetchedFooter, footerIndex, bytesToRead);
-        inner.skip(bytesToRead);
+        inner.seek(inner.getPos() + bytesToRead);
         return bytesToRead;
       } else {
         return -1;
@@ -79,7 +79,7 @@ public class PrefetchedFooterSeekableInputStream extends SeekableInputStream {
       final var bytesToRead = buf.remaining();
       if (footerIndex + bytesToRead <= prefetchedFooter.length) {
         buf.put(prefetchedFooter, footerIndex, bytesToRead);
-        inner.skip(bytesToRead);
+        inner.seek(inner.getPos() + bytesToRead);
         return;
       } else {
         throw new EOFException("Read extends past prefetched footer length");
@@ -94,7 +94,7 @@ public class PrefetchedFooterSeekableInputStream extends SeekableInputStream {
       final var footerIndex = (int) (inner.getPos() - footerStartPos);
       if (footerIndex < prefetchedFooter.length) {
         final var footerByte = prefetchedFooter[footerIndex];
-        inner.skip(1);
+        inner.seek(inner.getPos() + 1);
         return Byte.toUnsignedInt(footerByte);
       } else {
         return -1;

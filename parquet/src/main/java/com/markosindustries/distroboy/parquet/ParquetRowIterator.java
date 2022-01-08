@@ -10,16 +10,12 @@ import org.apache.parquet.io.RecordReader;
 import org.apache.parquet.schema.MessageType;
 
 public class ParquetRowIterator implements IteratorWithResources<ParquetGroupInspector> {
-  private final MessageType schema;
-  private final PageReadStore rowGroup;
   private final RecordReader<Group> recordReader;
   private final long totalRows;
   private long currentRow;
 
   // TODO: support "shouldSkipCurrentRecord"
   public ParquetRowIterator(MessageType schema, PageReadStore rowGroup) {
-    this.schema = schema;
-    this.rowGroup = rowGroup;
     final MessageColumnIO columnIO = new ColumnIOFactory().getColumnIO(schema);
     this.recordReader = columnIO.getRecordReader(rowGroup, new GroupRecordConverter(schema));
     this.totalRows = rowGroup.getRowCount();

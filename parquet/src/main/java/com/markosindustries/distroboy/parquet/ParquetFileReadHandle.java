@@ -16,14 +16,6 @@ public class ParquetFileReadHandle implements AutoCloseable {
     this.schema = reader.getFooter().getFileMetaData().getSchema();
   }
 
-  public ParquetFileReader getReader() {
-    return reader;
-  }
-
-  public MessageType getSchema() {
-    return schema;
-  }
-
   @Override
   public void close() throws Exception {
     reader.close();

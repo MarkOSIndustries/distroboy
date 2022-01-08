@@ -1,0 +1,13 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+repositories {
+    gradlePluginPortal() // so that external plugins can be resolved in dependencies section
+}
+
+dependencies {
+    implementation 'gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.18'
+    implementation 'gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.7.2'
+    implementation 'gradle.plugin.com.github.sherter.google-java-format:google-java-format-gradle-plugin:0.9'
+}

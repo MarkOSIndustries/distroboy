@@ -44,7 +44,7 @@ public class ParquetRowGroupIterator implements IteratorWithResources<PageReadSt
     reader.close();
   }
 
-  public MessageType getSchema() {
-    return schema;
+  public ParquetRowIterator rowIterator(PageReadStore rowGroup) {
+    return new ParquetRowIterator(schema, rowGroup);
   }
 }

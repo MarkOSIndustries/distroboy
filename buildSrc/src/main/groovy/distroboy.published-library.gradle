@@ -1,0 +1,68 @@
+plugins {
+    id 'distroboy.common'
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+javadoc {
+    options.addBooleanOption('html5', true)
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = "${pom_name}"
+                description = "${pom_description}"
+                url = 'https://github.com/MarkOSIndustries/distroboy'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://github.com/MarkOSIndustries/distroboy/blob/master/LICENSE'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'markosindustries'
+                        name = 'Mark Green'
+                        email = 'markosindustries@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/MarkOSIndustries/distroboy.git'
+                    url = 'https://github.com/MarkOSIndustries/distroboy'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "OSSRH"
+            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            credentials {
+                username = System.getenv("OSSRH_USERNAME")
+                password = System.getenv("OSSRH_PASSWORD")
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}

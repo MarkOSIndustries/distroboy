@@ -1,5 +1,7 @@
 package com.markosindustries.distroboy.core.iterators;
 
+import static java.util.Collections.unmodifiableList;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -24,7 +26,7 @@ public class MappingIteratorWithResources<I, O> implements IteratorWithResources
       IteratorWithResources<I> wrapped, Function<I, O> mapper, List<AutoCloseable> resources) {
     this.wrapped = wrapped;
     this.mapper = mapper;
-    this.resources = resources;
+    this.resources = unmodifiableList(resources);
   }
 
   @Override

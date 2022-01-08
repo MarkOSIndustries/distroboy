@@ -1,7 +1,5 @@
 package com.markosindustries.distroboy.core;
 
-import static com.markosindustries.distroboy.core.DataSourceRanges.describeRange;
-import static com.markosindustries.distroboy.core.DataSourceRanges.generateRanges;
 import static com.markosindustries.distroboy.core.clustering.ClusterMemberId.uuidFromBytes;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -19,13 +17,10 @@ import com.markosindustries.distroboy.core.operations.StaticDataSource;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceHashSpec;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
-import com.markosindustries.distroboy.schemas.Value;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -88,7 +83,7 @@ public final class Cluster implements AutoCloseable {
      * @return this
      */
     public Builder lobbyTimeout(Duration timeout) {
-      coordinatorLobbyTimeout = timeout;
+      coordinatorLobbyTimeout = Duration.ofMillis(timeout.toMillis());
       return this;
     }
 
@@ -287,16 +282,8 @@ public final class Cluster implements AutoCloseable {
     }
 
     // TODO: Move this stuff into ClusterMember maybe?;
-    final var dataSourceRanges =
-        generateRanges(opSequence.getDataSource().countOfFullSet(), expectedClusterMembers);
-    final var memberJobs =
-        new ArrayList<CompletableFuture<Iterator<Value>>>(dataSourceRanges.length);
-    for (int i = 0; i < dataSourceRanges.length; i++) {
-      log.debug("{} - distributing {}", clusterName, describeRange(dataSourceRanges[i]));
-      final var member = clusterMember.getMembers()[i];
-      final var range = dataSourceRanges[i];
-      memberJobs.add(CompletableFuture.supplyAsync(() -> member.process(range)));
-    }
+    log.debug("{} - distributing to {}", clusterName, expectedClusterMembers);
+    final var memberJobs = clusterMember.distributeDataSource(opSequence.getDataSource());
 
     log.debug("{} - collecting", clusterName);
     final var results =
@@ -310,9 +297,8 @@ public final class Cluster implements AutoCloseable {
   private <O> Iterator<O> retrieveRange(
       DataReferenceRange dataReferenceRange, Serialiser<O> serialiser) {
     return serialiser.deserialiseIterator(
-        clusterMember
-            .getMember(uuidFromBytes(dataReferenceRange.getReference().getMemberId()))
-            .retrieveRange(dataReferenceRange));
+        clusterMember.retrieveRangeFromMember(
+            uuidFromBytes(dataReferenceRange.getReference().getMemberId()), dataReferenceRange));
   }
 
   private <O> Iterator<O> retrieveByHash(
@@ -327,9 +313,9 @@ public final class Cluster implements AutoCloseable {
                     mapping(
                         dataReference -> {
                           final var memberId = uuidFromBytes(dataReference.getMemberId());
-                          final var member = clusterMember.getMember(memberId);
 
-                          return member.retrieveByHash(
+                          return clusterMember.retrieveByHashFromMember(
+                              memberId,
                               DataReferenceHashSpec.newBuilder()
                                   .setReference(dataReference)
                                   .setHash(hash)

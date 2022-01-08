@@ -1,0 +1,29 @@
+plugins {
+    id 'distroboy.common'
+    id 'distribution'
+}
+
+project.afterEvaluate {
+    jar {
+        manifest {
+            attributes(
+                    'Class-Path': configurations.runtimeClasspath.collect { 'dependencies/' + it.getName() }.join(' '),
+                    'Main-Class': main_class
+            )
+        }
+    }
+}
+
+distributions {
+    main {
+        distributionBaseName = "distroboy-${project.name}"
+        contents {
+            into("") {
+                from jar.archiveFile
+            }
+            into("dependencies") {
+                from configurations.runtimeClasspath
+            }
+        }
+    }
+}

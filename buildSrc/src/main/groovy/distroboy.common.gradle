@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+jar {
+    manifest {
+        attributes (
+                'Implementation-Title': "${project.group}.${project.name}",
+                'Implementation-Version': "${version_string}",
+                'DistroBoy-CommitSHA': "${commit_sha}"
+        )
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-Xlint:unchecked'
+    options.deprecation = true
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -15,7 +15,6 @@ import org.apache.kafka.common.TopicPartition;
  * given set of topics.
  */
 public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartition>> {
-  private final Collection<String> topics;
   private final List<TopicPartition> topicPartitions;
 
   /**
@@ -24,7 +23,6 @@ public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartitio
    * @param topics The set of topics to retrieve {@link TopicPartition}s for
    */
   public KafkaTopicPartitionsSource(Consumer<?, ?> kafkaConsumer, Collection<String> topics) {
-    this.topics = topics;
     this.topicPartitions =
         topics.stream()
             .flatMap(
