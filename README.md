@@ -13,16 +13,15 @@ DistroBoy libraries are published to [maven central][maven]. Add a dependency on
 <dependency>
   <groupId>com.markosindustries.distroboy</groupId>
   <artifactId>core</artifactId>
-  <version>0.3.3</version>
+  <version>0.4.1</version>
 </dependency>
 ```
 
-
-
 ### Examples
 
+- [distroboy-kafka-archiver](https://github.com/MarkOSIndustries/distroboy-kafka-archiver) - uses a variety of DistroBoy features 
 - The [example](./example/src/main/java/com/markosindustries/distroboy/example/Main.java) in this repo attempts to exercise most of DistroBoy's capabilities, though is more of an integration test than a "real" job 
-- More to come...
+
 
 ## Why yet another distributed compute project?
 Yes, I know. Hadoop, Spark, Flink, and a bunch of other projects already fill this space.
