@@ -1,39 +1,29 @@
 package com.markosindustries.distroboy.aws.s3;
 
+import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
-import com.markosindustries.distroboy.core.operations.DataSource;
+import com.markosindustries.distroboy.core.operations.InterleavedDataSource;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
-public class S3ObjectsSource implements DataSource<S3Object> {
+public class S3ObjectsSource extends InterleavedDataSource<S3Object> {
   private final S3Client s3Client;
   private final String bucket;
   private final String keyPrefix;
 
-  public S3ObjectsSource(S3Client s3Client, String bucket, String keyPrefix) {
+  public S3ObjectsSource(Cluster cluster, S3Client s3Client, String bucket, String keyPrefix) {
+    super(cluster);
     this.s3Client = s3Client;
     this.bucket = bucket;
     this.keyPrefix = keyPrefix;
   }
 
   @Override
-  public long countOfFullSet() {
-    ListObjectsV2Iterable responses =
-        s3Client.listObjectsV2Paginator(req -> req.bucket(bucket).prefix(keyPrefix));
-    return responses.stream().count();
-  }
-
-  @Override
-  public IteratorWithResources<S3Object> enumerateRangeOfFullSet(
-      long startInclusive, long endExclusive) {
+  public IteratorWithResources<S3Object> enumerateFullSet() {
     ListObjectsV2Iterable responses =
         s3Client.listObjectsV2Paginator(req -> req.bucket(bucket).prefix(keyPrefix));
     return IteratorWithResources.from(
-        responses.stream()
-            .skip(startInclusive)
-            .limit(endExclusive - startInclusive)
-            .flatMap(response -> response.contents().stream())
-            .iterator());
+        responses.stream().flatMap(response -> response.contents().stream()).iterator());
   }
 }

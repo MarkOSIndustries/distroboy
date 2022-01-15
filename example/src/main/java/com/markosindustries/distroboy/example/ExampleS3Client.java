@@ -93,7 +93,8 @@ public interface ExampleS3Client {
     // Read the parquet/avro records back from S3 and count them
     cluster
         .execute(
-            DistributedOpSequence.readFrom(new S3KeysSource(s3Client, "distroboy-bucket", "avro"))
+            DistributedOpSequence.readFrom(
+                    new S3KeysSource(cluster, s3Client, "distroboy-bucket", "avro"))
                 .mapWithResources(new DownloadFromS3ToDisk(s3Client, "distroboy-bucket"))
                 .flatMap(new ReadViaAvroFromParquetFiles<>(SampleParquetOutputRecord.class))
                 .map(record -> record.innerThing.thingId + " " + record.someNumber)
@@ -145,7 +146,7 @@ public interface ExampleS3Client {
     cluster
         .execute(
             DistributedOpSequence.readFrom(
-                    new S3ObjectsSource(s3Client, "distroboy-bucket", "protobuf"))
+                    new S3ObjectsSource(cluster, s3Client, "distroboy-bucket", "protobuf"))
                 .map(
                     s3Object -> {
                       return new S3ObjectInputFile(s3Client, "distroboy-bucket", s3Object);
