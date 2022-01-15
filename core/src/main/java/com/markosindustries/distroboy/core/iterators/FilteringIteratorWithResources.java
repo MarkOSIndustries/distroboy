@@ -13,6 +13,13 @@ public class FilteringIteratorWithResources<I> implements IteratorWithResources<
   private boolean hasNext;
   private I next;
 
+  /**
+   * Create a filtering iterator around an existing iterator. Note that the existing iterator must
+   * not be used elsewhere once wrapped.
+   *
+   * @param wrapped The wrapped iterator to take items from
+   * @param filter The condition under which items are returned from this iterator
+   */
   public FilteringIteratorWithResources(IteratorWithResources<I> wrapped, Predicate<I> filter) {
     this.wrapped = wrapped;
     this.filter = filter;

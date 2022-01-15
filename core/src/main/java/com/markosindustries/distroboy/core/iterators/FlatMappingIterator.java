@@ -16,6 +16,13 @@ public class FlatMappingIterator<I, O> implements Iterator<O> {
   private final Function<I, Iterator<O>> flatten;
   private Iterator<O> current = Collections.emptyIterator();
 
+  /**
+   * Create a flatmapping iterator around an existing iterator. Note that the existing iterator must
+   * not be used elsewhere once wrapped.
+   *
+   * @param wrapped The wrapped iterator to take items from
+   * @param flatten The function to extract iterators from each element in the wrapped iterator
+   */
   public FlatMappingIterator(Iterator<I> wrapped, Function<I, Iterator<O>> flatten) {
     this.wrapped = wrapped;
     this.flatten = flatten;

@@ -13,6 +13,13 @@ public class MappingIterator<I, O> implements Iterator<O> {
   private final Iterator<I> wrapped;
   private final Function<I, O> mapper;
 
+  /**
+   * Create a mapping iterator around an existing iterator. Note that the existing iterator must not
+   * be used elsewhere once wrapped.
+   *
+   * @param wrapped The wrapped iterator to take items from
+   * @param mapper The function to map wrapped iterator items to the output type
+   */
   public MappingIterator(Iterator<I> wrapped, Function<I, O> mapper) {
     this.wrapped = wrapped;
     this.mapper = mapper;

@@ -18,10 +18,26 @@ public class MappingIteratorWithResources<I, O> implements IteratorWithResources
   private final Function<I, O> mapper;
   private final List<AutoCloseable> resources;
 
+  /**
+   * Create a mapping iterator around an existing iterator. Note that the existing iterator must not
+   * be used elsewhere once wrapped.
+   *
+   * @param wrapped The wrapped iterator to take items from
+   * @param mapper The function to map wrapped iterator items to the output type
+   */
   public MappingIteratorWithResources(IteratorWithResources<I> wrapped, Function<I, O> mapper) {
     this(wrapped, mapper, Collections.emptyList());
   }
 
+  /**
+   * Create a mapping iterator around an existing iterator. Note that the existing iterator must not
+   * be used elsewhere once wrapped.
+   *
+   * @param wrapped The wrapped iterator to take items from
+   * @param mapper The function to map wrapped iterator items to the output type
+   * @param resources A set of resources which need to be closed when this {@link
+   *     IteratorWithResources} is closed
+   */
   public MappingIteratorWithResources(
       IteratorWithResources<I> wrapped, Function<I, O> mapper, List<AutoCloseable> resources) {
     this.wrapped = wrapped;

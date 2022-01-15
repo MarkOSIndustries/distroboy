@@ -14,6 +14,13 @@ public class FlatMappingIteratorWithResources<I, O> implements IteratorWithResou
   private final Function<I, IteratorWithResources<O>> flatten;
   private IteratorWithResources<O> current = IteratorWithResources.emptyIterator();
 
+  /**
+   * Create a flatmapping iterator around an existing iterator. Note that the existing iterator must
+   * not be used elsewhere once wrapped.
+   *
+   * @param wrapped The wrapped iterator to take items from
+   * @param flatten The function to extract iterators from each element in the wrapped iterator
+   */
   public FlatMappingIteratorWithResources(
       IteratorWithResources<I> wrapped, Function<I, IteratorWithResources<O>> flatten) {
     this.wrapped = wrapped;

@@ -10,6 +10,12 @@ public class ResultWithResource<T> {
   private final T result;
   private final AutoCloseable resource;
 
+  /**
+   * Create a {@link ResultWithResource}
+   *
+   * @param result The result
+   * @param resource The resource
+   */
   public ResultWithResource(T result, AutoCloseable resource) {
     this.result = result;
     this.resource = resource;
