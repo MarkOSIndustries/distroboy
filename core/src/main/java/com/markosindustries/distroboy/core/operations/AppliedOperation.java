@@ -13,7 +13,7 @@ public class AppliedOperation<I, O, CI, CO> implements Operand<O, CO> {
   private final Operand<I, CI> operand;
   private final Operation<I, O, CO> operation;
 
-  public <T, U> AppliedOperation(Operand<I, CI> operand, Operation<I, O, CO> operation) {
+  public AppliedOperation(Operand<I, CI> operand, Operation<I, O, CO> operation) {
     this.operand = operand;
     this.operation = operation;
   }

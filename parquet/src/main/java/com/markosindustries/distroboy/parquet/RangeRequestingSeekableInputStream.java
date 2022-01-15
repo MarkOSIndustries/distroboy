@@ -8,7 +8,11 @@ import org.apache.parquet.io.SeekableInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// TODO: document that this is for S3 basically, and example it up
+/**
+ * A {@link SeekableInputStream} which will retrieve byte ranges via a provided {@link
+ * RangeRetriever} Designed to allow partial byte range retrieval requests for storage technologies
+ * which support it
+ */
 public class RangeRequestingSeekableInputStream extends SeekableInputStream {
   private static final Logger log =
       LoggerFactory.getLogger(RangeRequestingSeekableInputStream.class);
@@ -22,6 +26,12 @@ public class RangeRequestingSeekableInputStream extends SeekableInputStream {
     InputStream retrieve(long position, long bytes);
   }
 
+  /**
+   * Create a RangeRequestingSeekableInputStream
+   *
+   * @param rangeRetriever The {@link RangeRetriever} which can supply byte ranges
+   * @param bytesAvailable The total bytes available in the source file
+   */
   public RangeRequestingSeekableInputStream(RangeRetriever rangeRetriever, long bytesAvailable) {
     this.rangeRetriever = rangeRetriever;
     this.bytesAvailable = bytesAvailable;

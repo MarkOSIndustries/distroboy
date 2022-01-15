@@ -6,11 +6,22 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.parquet.io.SeekableInputStream;
 
+/**
+ * Wraps a RangeRequestingSeekableInputStream and adds the capability to prefetch the footer. This
+ * is done so that we don't make many requests for footer byte ranges when one would do.
+ */
 public class PrefetchedFooterSeekableInputStream extends SeekableInputStream {
   private final RangeRequestingSeekableInputStream inner;
   private final byte[] prefetchedFooter;
   private final long footerStartPos;
 
+  /**
+   * Create a PrefetchedFooterSeekableInputStream
+   *
+   * @param inner The {@link RangeRequestingSeekableInputStream} to wrap
+   * @param prefetchedFooter The prefetched footer bytes
+   * @param footerStartPos The byte offset in the source file where the footer starts
+   */
   public PrefetchedFooterSeekableInputStream(
       RangeRequestingSeekableInputStream inner, byte[] prefetchedFooter, long footerStartPos) {
     this.inner = inner;

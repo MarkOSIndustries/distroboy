@@ -17,7 +17,7 @@ import java.util.List;
  *   <li>we can load a requested index range of the data
  * </ul>
  *
- * @param <I>
+ * @param <I> The type of items in the data source
  */
 public interface DataSource<I> extends Operand<I, List<I>> {
   long countOfFullSet();

@@ -8,6 +8,9 @@ import org.apache.parquet.io.SeekableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
+/**
+ * An implementation of {@link InputFile} which can request only the necessary bytes from an S3 key
+ */
 public class S3ObjectInputFile implements InputFile {
   private final S3Client s3Client;
   private final String bucket;
@@ -16,6 +19,13 @@ public class S3ObjectInputFile implements InputFile {
 
   private static final int FOOTER_AND_MAGIC_BYTES = 8;
 
+  /**
+   * Create an S3eObjectInputFile
+   *
+   * @param s3Client An S3Client
+   * @param bucket The name of the bucket containing the file
+   * @param s3Object The s3Object to access in the bucket
+   */
   public S3ObjectInputFile(S3Client s3Client, String bucket, S3Object s3Object) {
     this.s3Client = s3Client;
     this.bucket = bucket;
