@@ -2,6 +2,7 @@ package com.markosindustries.distroboy.core.iterators;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -24,6 +25,12 @@ public class FlatMappingIterator<I, O> implements Iterator<O> {
    * @param flatten The function to extract iterators from each element in the wrapped iterator
    */
   public FlatMappingIterator(Iterator<I> wrapped, Function<I, Iterator<O>> flatten) {
+    if (Objects.isNull(wrapped)) {
+      throw new IllegalArgumentException("Wrapped iterator cannot be null");
+    }
+    if (Objects.isNull(flatten)) {
+      throw new IllegalArgumentException("Flatten cannot be null");
+    }
     this.wrapped = wrapped;
     this.flatten = flatten;
   }

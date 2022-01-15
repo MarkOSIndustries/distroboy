@@ -11,8 +11,14 @@ import java.util.List;
  * @param <I> The type of items in the iterator
  */
 public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
-  static <I> IteratorWithResources<I> of(I element) {
-    return from(List.of(element).iterator());
+  @SafeVarargs
+  static <I> IteratorWithResources<I> of(I... elements) {
+    return from(List.of(elements).iterator());
+  }
+
+  @SafeVarargs
+  static <I> IteratorWithResources<I> of(AutoCloseable closeable, I... elements) {
+    return from(List.of(elements).iterator(), closeable);
   }
 
   static <I> IteratorWithResources<I> from(Iterator<I> iterator) {

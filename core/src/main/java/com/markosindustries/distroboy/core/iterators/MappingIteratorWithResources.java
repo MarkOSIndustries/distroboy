@@ -4,6 +4,7 @@ import static java.util.Collections.unmodifiableList;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -39,7 +40,15 @@ public class MappingIteratorWithResources<I, O> implements IteratorWithResources
    *     IteratorWithResources} is closed
    */
   public MappingIteratorWithResources(
-      IteratorWithResources<I> wrapped, Function<I, O> mapper, List<AutoCloseable> resources) {
+      IteratorWithResources<I> wrapped,
+      Function<I, O> mapper,
+      List<? extends AutoCloseable> resources) {
+    if (Objects.isNull(wrapped)) {
+      throw new IllegalArgumentException("Wrapped iterator cannot be null");
+    }
+    if (Objects.isNull(mapper)) {
+      throw new IllegalArgumentException("Mapper cannot be null");
+    }
     this.wrapped = wrapped;
     this.mapper = mapper;
     this.resources = unmodifiableList(resources);

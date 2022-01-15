@@ -1,5 +1,6 @@
 package com.markosindustries.distroboy.core.iterators;
 
+import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
@@ -21,6 +22,12 @@ public class FilteringIteratorWithResources<I> implements IteratorWithResources<
    * @param filter The condition under which items are returned from this iterator
    */
   public FilteringIteratorWithResources(IteratorWithResources<I> wrapped, Predicate<I> filter) {
+    if (Objects.isNull(wrapped)) {
+      throw new IllegalArgumentException("Wrapped iterator cannot be null");
+    }
+    if (Objects.isNull(filter)) {
+      throw new IllegalArgumentException("Filter cannot be null");
+    }
     this.wrapped = wrapped;
     this.filter = filter;
     this.hasNext = true;

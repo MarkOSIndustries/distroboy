@@ -1,6 +1,7 @@
 package com.markosindustries.distroboy.core.iterators;
 
 import java.util.Iterator;
+import java.util.Objects;
 
 /**
  * An {@link Iterator} which takes every nth element from the wrapped {@link Iterator}, starting at
@@ -19,10 +20,19 @@ public class SparseIterator<I> implements Iterator<I> {
    * be used elsewhere once wrapped.
    *
    * @param wrapped The wrapped iterator to take items from
-   * @param startingOffset The number of items to skip at the start
-   * @param interval The number of items to skip between each output
+   * @param startingOffset The number of items to skip at the start. Must not be negative.
+   * @param interval The number of items to advance after each output. Must be 1 or more.
    */
   public SparseIterator(Iterator<I> wrapped, int startingOffset, int interval) {
+    if (Objects.isNull(wrapped)) {
+      throw new IllegalArgumentException("Wrapped iterator cannot be null");
+    }
+    if (startingOffset < 0) {
+      throw new IllegalArgumentException("Starting offset must be non-negative");
+    }
+    if (interval < 1) {
+      throw new IllegalArgumentException("Interval must be greater than zero");
+    }
     this.wrapped = wrapped;
     this.interval = interval;
     this.hasNext = true;

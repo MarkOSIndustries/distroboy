@@ -1,6 +1,7 @@
 package com.markosindustries.distroboy.core.iterators;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -21,6 +22,12 @@ public class MappingIterator<I, O> implements Iterator<O> {
    * @param mapper The function to map wrapped iterator items to the output type
    */
   public MappingIterator(Iterator<I> wrapped, Function<I, O> mapper) {
+    if (Objects.isNull(wrapped)) {
+      throw new IllegalArgumentException("Wrapped iterator cannot be null");
+    }
+    if (Objects.isNull(mapper)) {
+      throw new IllegalArgumentException("Mapper cannot be null");
+    }
     this.wrapped = wrapped;
     this.mapper = mapper;
   }

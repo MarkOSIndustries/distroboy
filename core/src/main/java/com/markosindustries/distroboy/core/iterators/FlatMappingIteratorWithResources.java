@@ -1,5 +1,6 @@
 package com.markosindustries.distroboy.core.iterators;
 
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -23,6 +24,12 @@ public class FlatMappingIteratorWithResources<I, O> implements IteratorWithResou
    */
   public FlatMappingIteratorWithResources(
       IteratorWithResources<I> wrapped, Function<I, IteratorWithResources<O>> flatten) {
+    if (Objects.isNull(wrapped)) {
+      throw new IllegalArgumentException("Wrapped iterator cannot be null");
+    }
+    if (Objects.isNull(flatten)) {
+      throw new IllegalArgumentException("Flatten cannot be null");
+    }
     this.wrapped = wrapped;
     this.flatten = flatten;
   }
@@ -35,6 +42,13 @@ public class FlatMappingIteratorWithResources<I, O> implements IteratorWithResou
         throw new RuntimeException(e);
       }
       current = flatten.apply(wrapped.next());
+    }
+    if (!current.hasNext()) {
+      try {
+        current.close();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
