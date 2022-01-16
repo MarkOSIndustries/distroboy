@@ -5,9 +5,8 @@ import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResource
 import java.util.Map;
 
 /**
- * Transform each Map.Entry in the data set using the given mapping operation. Purely here for
- * the convenience of being able to provide a lambda which takes a key/value as separate
- * parameters.
+ * Transform each Map.Entry in the data set using the given mapping operation. Purely here for the
+ * convenience of being able to provide a lambda which takes a key/value as separate parameters.
  *
  * @param <K> The type of input Map keys
  * @param <V> The type of input Map values
