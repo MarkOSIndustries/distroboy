@@ -1,12 +1,12 @@
 package com.markosindustries.distroboy.core;
 
-import static com.markosindustries.distroboy.core.clustering.ClusterMemberId.uuidFromBytes;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 import com.markosindustries.distroboy.core.clustering.ClusterMember;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
+import com.markosindustries.distroboy.core.clustering.PersistedData;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.iterators.FlatMappingIterator;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
@@ -125,6 +125,8 @@ public final class Cluster implements AutoCloseable {
   public final int coordinatorPort;
   public final Duration coordinatorLobbyTimeout;
   public final int memberPort;
+  public final ClusterMemberId clusterMemberId;
+  public final PersistedData persistedData;
 
   private Cluster(
       String clusterName,
@@ -140,6 +142,8 @@ public final class Cluster implements AutoCloseable {
     this.coordinatorPort = coordinatorPort;
     this.coordinatorLobbyTimeout = coordinatorLobbyTimeout;
     this.memberPort = memberPort;
+    this.clusterMemberId = new ClusterMemberId();
+    this.persistedData = new PersistedData();
     this.clusterMember = new ClusterMember(this);
   }
 
@@ -215,7 +219,7 @@ public final class Cluster implements AutoCloseable {
     // We know how many, and we know which ones are for this member
     final var dataReferencesForSelf =
         dataReferences.stream()
-            .filter(ref -> ClusterMemberId.self.equals(uuidFromBytes(ref.getMemberId())))
+            .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
             .collect(toUnmodifiableList());
     for (final var dataReference : dataReferencesForSelf) {
       clusterMember.<I>pushHasher(
@@ -281,7 +285,6 @@ public final class Cluster implements AutoCloseable {
       return new DistributedOpResult.WorkerResult<>();
     }
 
-    // TODO: Move this stuff into ClusterMember maybe?;
     log.debug("{} - distributing to {}", clusterName, expectedClusterMembers);
     final var memberJobs = clusterMember.distributeDataSource(opSequence.getDataSource());
 
@@ -298,7 +301,8 @@ public final class Cluster implements AutoCloseable {
       DataReferenceRange dataReferenceRange, Serialiser<O> serialiser) {
     return serialiser.deserialiseIterator(
         clusterMember.retrieveRangeFromMember(
-            uuidFromBytes(dataReferenceRange.getReference().getMemberId()), dataReferenceRange));
+            ClusterMemberId.fromBytes(dataReferenceRange.getReference().getMemberId()),
+            dataReferenceRange));
   }
 
   private <O> Iterator<O> retrieveByHash(
@@ -309,10 +313,11 @@ public final class Cluster implements AutoCloseable {
         dataReferences.stream()
             .collect(
                 groupingBy(
-                    dataReference -> uuidFromBytes(dataReference.getMemberId()),
+                    dataReference -> ClusterMemberId.fromBytes(dataReference.getMemberId()),
                     mapping(
                         dataReference -> {
-                          final var memberId = uuidFromBytes(dataReference.getMemberId());
+                          final var memberId =
+                              ClusterMemberId.fromBytes(dataReference.getMemberId());
 
                           return clusterMember.retrieveByHashFromMember(
                               memberId,

@@ -57,7 +57,7 @@ public class Main {
               DistributedOpSequence.readFrom(new DirSource("/sample-data/txt"))
                   .flatMap(new ReadLinesFromFiles())
                   .filter(line -> line.startsWith("yay"))
-                  .persistToHeap(Serialisers.stringValues));
+                  .persistToHeap(cluster, Serialisers.stringValues));
 
       // Using persisted results in a new distributed operation - distributing evenly across the
       // cluster

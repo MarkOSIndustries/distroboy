@@ -4,14 +4,14 @@ import com.google.protobuf.ByteString;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class ClusterMemberId {
+public class DataReferenceId {
   private final UUID uuid;
 
-  public ClusterMemberId() {
+  public DataReferenceId() {
     this.uuid = UUID.randomUUID();
   }
 
-  private ClusterMemberId(UUID uuid) {
+  private DataReferenceId(UUID uuid) {
     this.uuid = uuid;
   }
 
@@ -23,15 +23,15 @@ public final class ClusterMemberId {
     return UUIDs.asBytes(uuid);
   }
 
-  public static ClusterMemberId fromBytes(ByteString bytes) {
-    return new ClusterMemberId(UUIDs.fromBytes(bytes));
+  public static DataReferenceId fromBytes(ByteString bytes) {
+    return new DataReferenceId(UUIDs.fromBytes(bytes));
   }
 
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    ClusterMemberId that = (ClusterMemberId) o;
+    DataReferenceId that = (DataReferenceId) o;
     return uuid.equals(that.uuid);
   }
 
@@ -42,6 +42,6 @@ public final class ClusterMemberId {
 
   @Override
   public String toString() {
-    return "db-cm-" + uuid;
+    return "db-dr-" + uuid;
   }
 }

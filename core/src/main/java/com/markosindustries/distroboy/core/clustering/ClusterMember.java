@@ -2,8 +2,6 @@ package com.markosindustries.distroboy.core.clustering;
 
 import static com.markosindustries.distroboy.core.DataSourceRanges.describeRange;
 import static com.markosindustries.distroboy.core.DataSourceRanges.generateRanges;
-import static com.markosindustries.distroboy.core.clustering.ClusterMemberId.uuidAsBytes;
-import static com.markosindustries.distroboy.core.clustering.ClusterMemberId.uuidFromBytes;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
 import com.google.protobuf.Empty;
@@ -29,7 +27,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,7 +45,8 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ClusterMember.class);
   private final BlockingQueue<Job> jobs;
-  private final ConcurrentMap<UUID, BlockingQueue<HashedDataReference<?>>> dataReferenceHashers;
+  private final ConcurrentMap<DataReferenceId, BlockingQueue<HashedDataReference<?>>>
+      dataReferenceHashers;
   private final Object classifiersLock = new Object();
   private final AtomicBoolean disbanded = new AtomicBoolean(false);
   private final Object disbandedLock = new Object();
@@ -57,10 +55,12 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   private final Server memberServer;
   private final ConnectionToClusterMember[] members;
   private final boolean isLeader;
-  private final Map<UUID, ConnectionToClusterMember> memberIdentities;
+  private final Map<ClusterMemberId, ConnectionToClusterMember> memberIdentities;
+  private final Cluster cluster;
 
   public ClusterMember(Cluster cluster)
       throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    this.cluster = cluster;
     this.jobs = new LinkedBlockingQueue<>();
     this.dataReferenceHashers = new ConcurrentHashMap<>();
     this.memberServer = ServerBuilder.forPort(cluster.memberPort).addService(this).build().start();
@@ -87,7 +87,8 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
           Arrays.stream(members)
               .collect(
                   toUnmodifiableMap(
-                      worker -> uuidFromBytes(worker.identify().getNodeId()), Function.identity()));
+                      worker -> ClusterMemberId.fromBytes(worker.identify().getNodeId()),
+                      Function.identity()));
     } catch (Throwable t) {
       memberServer.shutdown();
       throw t;
@@ -112,23 +113,23 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   }
 
   public Iterator<Value> retrieveRangeFromMember(
-      UUID memberId, DataReferenceRange dataReferenceRange) {
+      ClusterMemberId memberId, DataReferenceRange dataReferenceRange) {
     return getMember(memberId).retrieveRange(dataReferenceRange);
   }
 
   public Iterator<Value> retrieveByHashFromMember(
-      UUID memberId, DataReferenceHashSpec dataReferenceHashSpec) {
+      ClusterMemberId memberId, DataReferenceHashSpec dataReferenceHashSpec) {
     return getMember(memberId).retrieveByHash(dataReferenceHashSpec);
   }
 
-  private ConnectionToClusterMember getMember(UUID memberId) {
+  private ConnectionToClusterMember getMember(ClusterMemberId memberId) {
     return memberIdentities.get(memberId);
   }
 
   @Override
   public void identify(Empty request, StreamObserver<ClusterMemberIdentity> responseObserver) {
     responseObserver.onNext(
-        ClusterMemberIdentity.newBuilder().setNodeId(uuidAsBytes(ClusterMemberId.self)).build());
+        ClusterMemberIdentity.newBuilder().setNodeId(cluster.clusterMemberId.asBytes()).build());
     responseObserver.onCompleted();
   }
 
@@ -180,17 +181,18 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
 
   @Override
   public void retrieveRange(DataReferenceRange request, StreamObserver<Value> responseObserver) {
-    final var memberId = uuidFromBytes(request.getReference().getMemberId());
-    if (!ClusterMemberId.self.equals(memberId)) {
+    final var memberId = ClusterMemberId.fromBytes(request.getReference().getMemberId());
+    if (!cluster.clusterMemberId.equals(memberId)) {
       log.error(
           "Wrong memberId for data range retrieval, this is probably broken -- {} {}",
           memberId,
-          ClusterMemberId.self);
+          cluster.clusterMemberId);
     }
 
     // TODO: backpressure
     final var persistedData =
-        PersistedData.STORED_REFERENCES.get(uuidFromBytes(request.getReference().getReferenceId()));
+        cluster.persistedData.retrieve(
+            DataReferenceId.fromBytes(request.getReference().getReferenceId()));
     final var iterator = persistedData.getSerialisingIterator();
     long startInclusive = request.getRange().getStartInclusive();
     long endExclusive = request.getRange().getEndExclusive();
@@ -215,7 +217,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   @Override
   public void retrieveByHash(
       DataReferenceHashSpec request, StreamObserver<Value> responseObserver) {
-    final var referenceId = uuidFromBytes(request.getReference().getReferenceId());
+    final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
     final var classifiersForDataReference =
         dataReferenceHashers.computeIfAbsent(referenceId, dr -> new LinkedBlockingQueue<>());
     HashedDataReference<?> hashedDataReference = classifiersForDataReference.peek();
@@ -237,7 +239,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
         // pop this one off the queue, it's being handled now
         classifiersForDataReference.poll();
         // TODO: backpressure
-        final var persistedData = PersistedData.STORED_REFERENCES.get(referenceId);
+        final var persistedData = cluster.persistedData.retrieve(referenceId);
         final var iterator = persistedData.getIteratorWithSerialiser();
         while (iterator.hasNext()) {
           final var next = iterator.next();
@@ -290,7 +292,8 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     synchronized (classifiersLock) {
       final var hashersForDataReference =
           dataReferenceHashers.computeIfAbsent(
-              uuidFromBytes(dataReference.getReferenceId()), dr -> new LinkedBlockingQueue<>());
+              DataReferenceId.fromBytes(dataReference.getReferenceId()),
+              dr -> new LinkedBlockingQueue<>());
       hashersForDataReference.add(
           new HashedDataReference<T>(dataReference, hasher, expectedRetrieveCount));
       classifiersLock.notify();

@@ -9,7 +9,6 @@ import com.markosindustries.distroboy.aws.s3.S3ObjectsSource;
 import com.markosindustries.distroboy.aws.s3.parquet.S3ObjectInputFile;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Hashing;
-import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
@@ -72,7 +71,9 @@ public interface ExampleS3Client {
                         new ParquetAvroFilesWriterStrategy<>(
                             (_ignored) -> {
                               return Path.of(
-                                  "/output-data/output.avro." + ClusterMemberId.self + ".parquet");
+                                  "/output-data/output.avro."
+                                      + cluster.clusterMemberId
+                                      + ".parquet");
                             },
                             SampleParquetOutputRecord.class)))
                 .flatMap(IteratorWithResources::from)
