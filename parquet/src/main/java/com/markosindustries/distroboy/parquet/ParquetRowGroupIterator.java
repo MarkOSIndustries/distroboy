@@ -4,7 +4,7 @@ import static java.util.Objects.nonNull;
 
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import java.io.IOException;
-import org.apache.parquet.ParquetReadOptions;
+import java.util.function.Function;
 import org.apache.parquet.column.page.PageReadStore;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.io.InputFile;
@@ -15,11 +15,27 @@ public class ParquetRowGroupIterator implements IteratorWithResources<PageReadSt
   private final MessageType schema;
   private PageReadStore currentPage;
 
-  // TODO: support selecting a subset of columns, predicate pushdown via row filtering, etc (via
+  // TODO: support predicate pushdown via row filtering (via
   //  read options)
   public ParquetRowGroupIterator(InputFile inputFile) throws IOException {
-    this.reader = ParquetFileReader.open(inputFile, ParquetReadOptions.builder().build());
-    this.schema = reader.getFooter().getFileMetaData().getSchema();
+    this(inputFile, Function.identity());
+  }
+
+  public ParquetRowGroupIterator(InputFile inputFile, MessageType projection) throws IOException {
+    this(inputFile, ignored -> projection);
+  }
+
+  public ParquetRowGroupIterator(
+      InputFile inputFile, Function<MessageType, MessageType> projectSchema) throws IOException {
+    this(ParquetFileReader.open(inputFile), projectSchema);
+  }
+
+  public ParquetRowGroupIterator(
+      ParquetFileReader reader, Function<MessageType, MessageType> projectSchema)
+      throws IOException {
+    this.reader = reader;
+    this.schema = projectSchema.apply(reader.getFooter().getFileMetaData().getSchema());
+    reader.setRequestedSchema(schema);
     currentPage = reader.readNextRowGroup();
   }
 

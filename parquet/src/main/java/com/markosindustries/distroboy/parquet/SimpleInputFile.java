@@ -6,7 +6,7 @@ import java.io.RandomAccessFile;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
 
-class SimpleInputFile implements InputFile {
+public class SimpleInputFile implements InputFile {
   private final File file;
 
   SimpleInputFile(File file) {

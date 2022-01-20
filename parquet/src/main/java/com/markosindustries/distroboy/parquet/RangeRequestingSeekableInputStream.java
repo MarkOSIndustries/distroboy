@@ -64,11 +64,11 @@ public class RangeRequestingSeekableInputStream extends SeekableInputStream {
 
   @Override
   public void readFully(byte[] bytes, int start, int len) throws IOException {
-    try (final var stream = rangeRetriever.retrieve(position, bytes.length)) {
+    try (final var stream = rangeRetriever.retrieve(position, len)) {
       var arrayOffset = start;
       var bytesJustRead = 0;
       while ((arrayOffset < start + len)
-          && (bytesJustRead = stream.read(bytes, arrayOffset, bytes.length)) != -1) {
+          && (bytesJustRead = stream.read(bytes, arrayOffset, len - (arrayOffset - start))) != -1) {
         arrayOffset += bytesJustRead;
         position += bytesJustRead;
       }
@@ -119,7 +119,6 @@ public class RangeRequestingSeekableInputStream extends SeekableInputStream {
     if (buf.hasArray()) {
       final var bytesToRead = buf.remaining();
       readFully(buf.array(), buf.arrayOffset() + buf.position(), bytesToRead);
-      position += bytesToRead;
       buf.position(buf.limit());
     } else {
       int bytesRead = 0;

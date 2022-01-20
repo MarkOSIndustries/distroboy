@@ -22,7 +22,7 @@ public class ParquetGroupInspector {
   }
 
   public boolean isPresent(String fieldName) {
-    return group.getFieldRepetitionCount(fieldName) > 0;
+    return group.getType().containsField(fieldName) && group.getFieldRepetitionCount(fieldName) > 0;
   }
 
   public boolean isPrimitive(String fieldName) {
