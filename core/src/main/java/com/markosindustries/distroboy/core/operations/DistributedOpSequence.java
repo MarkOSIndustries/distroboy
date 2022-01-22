@@ -2,7 +2,7 @@ package com.markosindustries.distroboy.core.operations;
 
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Count;
-import com.markosindustries.distroboy.core.DataReferenceList;
+import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.serialisation.ProtobufValues;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
@@ -10,6 +10,7 @@ import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.schemas.DataReference;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * A sequence of operations to perform on a distroboy cluster. This is the main interface for
@@ -189,12 +190,42 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * @return A new {@link DistributedOpSequence} whose result will be a set of {@link
      *     DataReference}s to the data stored on each node
      */
-    public DistributedOpSequence<I, DataReference, DataReferenceList<O>> persistToHeap(
+    public DistributedOpSequence<I, DataReference, PersistedDataReferenceList<O>> persistToHeap(
         Cluster cluster, Serialiser<O> serialiser) {
       return new DistributedOpSequence<>(
           dataSource,
           operand.then(new PersistToHeap<>(cluster, serialiser)),
           new ProtobufValues<>(DataReference::parseFrom));
+    }
+
+    /**
+     * Perform an efficient once-only redistribution and groupBy via distributed iterator
+     * references.
+     *
+     * @param classifier Given an input I, returns a grouping key K, which will be hashed
+     * @param hasher A function which takes the grouping key K, and hashes it to a number in Integer
+     *     space
+     * @param partitions The number of partitions desired (ie: the modulus to use for the hashes)
+     * @param serialiser A {@link Serialiser} for the data being moved around the cluster.
+     * @param <K> The type of the key to group by (and which will be hashed for redistribution)
+     * @return A new {@link DistributedOpSequence.HashMapBuilder}
+     */
+    public <K> HashMapBuilder<Integer, K, List<O>> redistributeAndGroupBy(
+        Cluster cluster,
+        Function<O, K> classifier,
+        Function<K, Integer> hasher,
+        int partitions,
+        Serialiser<O> serialiser)
+        throws InterruptedException {
+      final var dataReferences =
+          cluster.distributeReferences(
+              new DistributedOpSequence<>(
+                  dataSource,
+                  operand.then(new GetIteratorReferences<>(cluster, serialiser)),
+                  new ProtobufValues<>(DataReference::parseFrom)));
+
+      return cluster.redistributeAndGroupBy(
+          dataReferences, classifier, hasher, partitions, serialiser);
     }
 
     /**

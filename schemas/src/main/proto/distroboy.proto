@@ -81,7 +81,10 @@ message ClusterMemberIdentity {
 message DataReference {
   bytes member_id = 1;
   bytes reference_id = 2;
-  uint64 count = 3;
+  oneof countable_oneof {
+    uint64 count = 3;
+    bool uncountable = 4;
+  }
 }
 
 message DataReferenceRange {

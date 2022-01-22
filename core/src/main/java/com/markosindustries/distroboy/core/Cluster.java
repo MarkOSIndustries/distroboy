@@ -152,17 +152,8 @@ public final class Cluster implements AutoCloseable {
     clusterMember.close();
   }
 
-  /**
-   * Persist the data in its current form across the cluster
-   *
-   * @param opSequence The set of operations to be performed before persisting the data
-   * @param <I> The input type
-   * @param <O> The output type
-   * @return A list of references to the persisted data
-   * @throws InterruptedException If interrupted while waiting for all references to be collected
-   */
-  public <I, O> DataReferenceList<O> persist(
-      DistributedOpSequence<I, DataReference, DataReferenceList<O>> opSequence)
+  private <I, O> List<DataReference> distributeReferencesRaw(
+      DistributedOpSequence<I, DataReference, ? extends DataReferenceList<O>> opSequence)
       throws InterruptedException {
     final var dataReferencesResult = execute(opSequence);
 
@@ -173,7 +164,38 @@ public final class Cluster implements AutoCloseable {
       clusterMember.distributeDataReferences(dataReferences.list());
     }
 
-    return new DataReferenceList<O>(clusterMember.awaitDistributedDataReferences());
+    return clusterMember.awaitDistributedDataReferences();
+  }
+
+  /**
+   * Give all nodes references to the data in its current form across the cluster. Data isn't
+   * guaranteed to be stored, reiterable, or countable. For that, use {@link #persist}
+   *
+   * @param opSequence The set of operations to be performed before persisting the data
+   * @param <I> The input type
+   * @param <O> The output type
+   * @return A list of references to the persisted data
+   * @throws InterruptedException If interrupted while waiting for all references to be collected
+   */
+  public <I, O> DataReferenceList<O> distributeReferences(
+      DistributedOpSequence<I, DataReference, DataReferenceList<O>> opSequence)
+      throws InterruptedException {
+    return new DataReferenceList<O>(distributeReferencesRaw(opSequence));
+  }
+
+  /**
+   * Persist the data in its current form across the cluster, and give all nodes references
+   *
+   * @param opSequence The set of operations to be performed before persisting the data
+   * @param <I> The input type
+   * @param <O> The output type
+   * @return A list of references to the persisted data
+   * @throws InterruptedException If interrupted while waiting for all references to be collected
+   */
+  public <I, O> PersistedDataReferenceList<O> persist(
+      DistributedOpSequence<I, DataReference, PersistedDataReferenceList<O>> opSequence)
+      throws InterruptedException {
+    return new PersistedDataReferenceList<O>(distributeReferencesRaw(opSequence));
   }
 
   /**
@@ -186,7 +208,7 @@ public final class Cluster implements AutoCloseable {
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
   public <I> DistributedOpSequence.Builder<DataReferenceRange, I, List<I>> redistributeEqually(
-      DataReferenceList<I> dataReferences, Serialiser<I> serialiser) {
+      PersistedDataReferenceList<I> dataReferences, Serialiser<I> serialiser) {
     return DistributedOpSequence.readFrom(new EvenlyRedistributedDataSource<I>(dataReferences))
         .flatMap(
             dataReference -> IteratorWithResources.from(retrieveRange(dataReference, serialiser)));

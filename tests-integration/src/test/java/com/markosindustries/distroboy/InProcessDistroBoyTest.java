@@ -2,7 +2,6 @@ package com.markosindustries.distroboy;
 
 import static java.util.stream.Collectors.groupingBy;
 
-import com.markosindustries.distroboy.core.DataReferenceList;
 import com.markosindustries.distroboy.core.Hashing;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
@@ -64,16 +63,10 @@ public class InProcessDistroBoyTest {
         "InProcessDistroBoyTest.canUseRedistributeAndGroupBy",
         2,
         cluster -> {
-          final var simpleJob =
-              DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
-                  .persistToHeap(cluster, Serialisers.integerValues);
-
-          final var dataReferences = cluster.persist(simpleJob);
-
           final var groupedDataJob =
-              cluster
+              DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
                   .redistributeAndGroupBy(
-                      dataReferences,
+                      cluster,
                       num -> num % modulo,
                       Hashing::integers,
                       modulo,
@@ -111,7 +104,7 @@ public class InProcessDistroBoyTest {
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
                   .persistToHeap(cluster, Serialisers.integerValues);
 
-          DataReferenceList<Integer> dataReferences = cluster.persist(simpleJob);
+          final var dataReferences = cluster.persist(simpleJob);
 
           final var redistributeJob =
               cluster
