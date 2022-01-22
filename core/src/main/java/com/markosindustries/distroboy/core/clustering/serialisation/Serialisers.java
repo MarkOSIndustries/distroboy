@@ -11,6 +11,7 @@ public interface Serialisers {
   DoubleValues doubleValues = new DoubleValues();
   StringValues stringValues = new StringValues();
   ByteArrayValues byteArrayValues = new ByteArrayValues();
+  ByteStringValues byteStringValues = new ByteStringValues();
   Serialiser<Void> voidValues = new VoidValues();
 
   static <T> ListValues<T> listEntries(Serialiser<T> serialiser) {

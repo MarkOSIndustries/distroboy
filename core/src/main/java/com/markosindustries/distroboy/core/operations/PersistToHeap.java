@@ -1,6 +1,7 @@
 package com.markosindustries.distroboy.core.operations;
 
 import com.markosindustries.distroboy.core.Cluster;
+import com.markosindustries.distroboy.core.DataReferenceList;
 import com.markosindustries.distroboy.core.clustering.DataReferenceId;
 import com.markosindustries.distroboy.core.clustering.PersistedDataReference;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
@@ -10,7 +11,7 @@ import com.markosindustries.distroboy.schemas.DataReference;
 import java.util.Iterator;
 import java.util.List;
 
-public class PersistToHeap<I> implements Operation<I, DataReference, List<DataReference>> {
+public class PersistToHeap<I> implements Operation<I, DataReference, DataReferenceList<I>> {
   private final Cluster cluster;
   private final Serialiser<I> serialiser;
 
@@ -39,7 +40,7 @@ public class PersistToHeap<I> implements Operation<I, DataReference, List<DataRe
   }
 
   @Override
-  public List<DataReference> collect(Iterator<DataReference> results) {
-    return IteratorTo.list(results);
+  public DataReferenceList<I> collect(Iterator<DataReference> results) {
+    return new DataReferenceList<I>(IteratorTo.list(results));
   }
 }

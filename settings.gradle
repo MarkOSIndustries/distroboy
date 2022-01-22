@@ -8,4 +8,5 @@ include 'example-schemas'
 include 'kafka'
 include 'parquet'
 include 'schemas'
+include 'tests-integration'
 

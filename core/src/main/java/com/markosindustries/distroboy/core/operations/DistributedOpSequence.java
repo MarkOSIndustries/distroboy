@@ -2,6 +2,7 @@ package com.markosindustries.distroboy.core.operations;
 
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Count;
+import com.markosindustries.distroboy.core.DataReferenceList;
 import com.markosindustries.distroboy.core.clustering.serialisation.ProtobufValues;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
@@ -188,7 +189,7 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * @return A new {@link DistributedOpSequence} whose result will be a set of {@link
      *     DataReference}s to the data stored on each node
      */
-    public DistributedOpSequence<I, DataReference, List<DataReference>> persistToHeap(
+    public DistributedOpSequence<I, DataReference, DataReferenceList<O>> persistToHeap(
         Cluster cluster, Serialiser<O> serialiser) {
       return new DistributedOpSequence<>(
           dataSource,

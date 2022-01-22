@@ -161,18 +161,19 @@ public final class Cluster implements AutoCloseable {
    * @return A list of references to the persisted data
    * @throws InterruptedException If interrupted while waiting for all references to be collected
    */
-  public <I, O> List<DataReference> persist(
-      DistributedOpSequence<I, O, List<DataReference>> opSequence) throws InterruptedException {
+  public <I, O> DataReferenceList<O> persist(
+      DistributedOpSequence<I, DataReference, DataReferenceList<O>> opSequence)
+      throws InterruptedException {
     final var dataReferencesResult = execute(opSequence);
 
     if (dataReferencesResult.isClusterLeader()) {
       final var dataReferences = dataReferencesResult.getResult();
 
       // The members will all want remote data references from us
-      clusterMember.distributeDataReferences(dataReferences);
+      clusterMember.distributeDataReferences(dataReferences.list());
     }
 
-    return clusterMember.awaitDistributedDataReferences();
+    return new DataReferenceList<O>(clusterMember.awaitDistributedDataReferences());
   }
 
   /**
@@ -185,8 +186,8 @@ public final class Cluster implements AutoCloseable {
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
   public <I> DistributedOpSequence.Builder<DataReferenceRange, I, List<I>> redistributeEqually(
-      List<DataReference> dataReferences, Serialiser<I> serialiser) {
-    return DistributedOpSequence.readFrom(new EvenlyRedistributedDataSource(dataReferences))
+      DataReferenceList<I> dataReferences, Serialiser<I> serialiser) {
+    return DistributedOpSequence.readFrom(new EvenlyRedistributedDataSource<I>(dataReferences))
         .flatMap(
             dataReference -> IteratorWithResources.from(retrieveRange(dataReference, serialiser)));
   }
@@ -210,7 +211,7 @@ public final class Cluster implements AutoCloseable {
       DistributedOpSequence.IteratorBuilder<
               Integer, I, IteratorWithResources<I>, List<IteratorWithResources<I>>>
           redistributeByHash(
-              List<DataReference> dataReferences,
+              DataReferenceList<I> dataReferences,
               Function<I, H> classifier,
               Function<H, Integer> hasher,
               int partitions,
@@ -218,7 +219,7 @@ public final class Cluster implements AutoCloseable {
     // We're expecting a bunch of calls to ask for this data classified.
     // We know how many, and we know which ones are for this member
     final var dataReferencesForSelf =
-        dataReferences.stream()
+        dataReferences.list().stream()
             .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
             .collect(toUnmodifiableList());
     for (final var dataReference : dataReferencesForSelf) {
@@ -233,7 +234,7 @@ public final class Cluster implements AutoCloseable {
         .mapToIterators(
             hash ->
                 IteratorWithResources.from(
-                    retrieveByHash(dataReferences, hash, partitions, serialiser)))
+                    retrieveByHash(dataReferences.list(), hash, partitions, serialiser)))
         .materialise(); // important that we materialise, otherwise not all GRPC retrieveByHash
     // calls will be made
   }
@@ -253,7 +254,7 @@ public final class Cluster implements AutoCloseable {
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
   public <I, K> DistributedOpSequence.HashMapBuilder<Integer, K, List<I>> redistributeAndGroupBy(
-      List<DataReference> dataReferences,
+      DataReferenceList<I> dataReferences,
       Function<I, K> classifier,
       Function<K, Integer> hasher,
       int partitions,

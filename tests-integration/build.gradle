@@ -1,0 +1,7 @@
+plugins {
+    id 'distroboy.linting'
+}
+
+dependencies {
+    testImplementation project(':core')
+}

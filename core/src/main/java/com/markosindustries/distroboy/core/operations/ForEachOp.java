@@ -1,8 +1,6 @@
 package com.markosindustries.distroboy.core.operations;
 
-import com.markosindustries.distroboy.core.iterators.FilteringIteratorWithResources;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
-import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResources;
 import java.util.Iterator;
 
 /**
@@ -17,18 +15,17 @@ public interface ForEachOp<I> extends Operation<I, Void, Void> {
 
   @Override
   default IteratorWithResources<Void> apply(IteratorWithResources<I> input) throws Exception {
-    final var filteringIterator =
-        new FilteringIteratorWithResources<I>(
-            input,
-            i -> {
-              forEach(i);
-              return false;
-            });
-    return new MappingIteratorWithResources<I, Void>(filteringIterator, i -> null);
+    while (input.hasNext()) {
+      forEach(input.next());
+    }
+    return IteratorWithResources.emptyIterator();
   }
 
   @Override
   default Void collect(Iterator<Void> results) {
+    while (results.hasNext()) {
+      results.next();
+    }
     return null;
   }
 }

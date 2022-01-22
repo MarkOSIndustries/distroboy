@@ -6,12 +6,8 @@ import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import java.util.Collection;
 
 /**
- * A data source which came from an in memory collection. Typically this is for internal use by
- * distroboy when doing dataset redistributions (eg: hashing and grouping). <br>
- * Care must be taken to ensure that all cluster nodes will arrive at a consistent conclusion as to
- * what the distributed data set contains. <br>
- * eg: If you run a job with 4 nodes who all declare the same collection - you will have 4 copies of
- * each entry in your distributed data set.
+ * A data source which came from an in memory collection. Typically, this is for internal use by
+ * distroboy when doing dataset redistributions (eg: hashing and grouping).
  *
  * @param <I> The type of data in the {@link java.util.Collection}
  */

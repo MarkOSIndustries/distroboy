@@ -1,7 +1,6 @@
 package com.markosindustries.distroboy.core.operations;
 
-import static java.util.Collections.unmodifiableList;
-
+import com.markosindustries.distroboy.core.DataReferenceList;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
@@ -11,12 +10,12 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
-public class EvenlyRedistributedDataSource implements DataSource<DataReferenceRange> {
+public class EvenlyRedistributedDataSource<I> implements DataSource<DataReferenceRange> {
   private final List<DataReference> dataReferences;
 
-  public EvenlyRedistributedDataSource(List<DataReference> dataReferences) {
-    this.dataReferences = unmodifiableList(dataReferences);
-    this.count = dataReferences.stream().mapToLong(DataReference::getCount).sum();
+  public EvenlyRedistributedDataSource(DataReferenceList<I> dataReferences) {
+    this.dataReferences = dataReferences.list();
+    this.count = this.dataReferences.stream().mapToLong(DataReference::getCount).sum();
   }
 
   private final long count;
