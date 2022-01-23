@@ -78,6 +78,18 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
     }
 
     /**
+     * Generic extension point for using arbitrary operations external to DistroBoy.
+     *
+     * @param op The operation to apply next
+     * @param <O2> The new output type of the sequence
+     * @param <C2> The new collected output type of the sequence
+     * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
+     */
+    public <O2, C2> Builder<I, O2, C2> then(Operation<O, O2, C2> op) {
+      return new Builder<>(dataSource, operand.then(op));
+    }
+
+    /**
      * Transforms each item via the given {@link MapOp}
      *
      * @param mapOp the mapping operation
@@ -195,6 +207,22 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       return new DistributedOpSequence<>(
           dataSource,
           operand.then(new PersistToHeap<>(cluster, serialiser)),
+          new ProtobufValues<>(DataReference::parseFrom));
+    }
+
+    /**
+     * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if
+     * the data doesn't fit in the available temp dir space, the entire job will fail.
+     *
+     * @param serialiser A {@link Serialiser} for the data being persisted
+     * @return A new {@link DistributedOpSequence} whose result will be a set of {@link
+     *     DataReference}s to the data stored on each node
+     */
+    public DistributedOpSequence<I, DataReference, PersistedDataReferenceList<O>> persistToDisk(
+        Cluster cluster, Serialiser<O> serialiser) {
+      return new DistributedOpSequence<>(
+          dataSource,
+          operand.then(new PersistToDisk<>(cluster, serialiser)),
           new ProtobufValues<>(DataReference::parseFrom));
     }
 

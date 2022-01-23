@@ -93,16 +93,52 @@ public class InProcessDistroBoyTest {
   }
 
   @Test
-  public void canUseRedistributeEvenly() throws Exception {
+  public void canUseRedistributeEvenlyFromHeap() throws Exception {
     final var expectedValues = List.of(1, 2, 3, 4);
 
     DistroBoySingleProcess.run(
-        "InProcessDistroBoyTest.canUseRedistributeEvenly",
+        "InProcessDistroBoyTest.canUseRedistributeEvenlyFromHeap",
         2,
         cluster -> {
           final var simpleJob =
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
                   .persistToHeap(cluster, Serialisers.integerValues);
+
+          final var dataReferences = cluster.persist(simpleJob);
+
+          final var redistributeJob =
+              cluster
+                  .redistributeEqually(dataReferences, Serialisers.integerValues)
+                  .map(x -> cluster.clusterMemberId.asBytes())
+                  .collect(Serialisers.byteStringValues);
+
+          cluster
+              .execute(redistributeJob)
+              .onClusterLeader(
+                  memberIds -> {
+                    Assertions.assertEquals(expectedValues.size(), memberIds.size());
+
+                    final var uniqueMemberIds =
+                        memberIds.stream()
+                            .map(ClusterMemberId::fromBytes)
+                            .collect(Collectors.toUnmodifiableSet());
+
+                    Assertions.assertEquals(expectedValues.size() / 2, uniqueMemberIds.size());
+                  });
+        });
+  }
+
+  @Test
+  public void canUseRedistributeEvenlyFromDisk() throws Exception {
+    final var expectedValues = List.of(1, 2, 3, 4);
+
+    DistroBoySingleProcess.run(
+        "InProcessDistroBoyTest.canUseRedistributeEvenlyFromDisk",
+        2,
+        cluster -> {
+          final var simpleJob =
+              DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
+                  .persistToDisk(cluster, Serialisers.integerValues);
 
           final var dataReferences = cluster.persist(simpleJob);
 

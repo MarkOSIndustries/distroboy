@@ -1,26 +1,20 @@
 package com.markosindustries.distroboy.core.clustering.serialisation;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
+import com.markosindustries.distroboy.core.protobuf.ParseFromByteString;
 import com.markosindustries.distroboy.schemas.Value;
 
 /** Default serialiser for protobuf {@link MessageLite}s */
 public class ProtobufValues<T extends MessageLite> implements Serialiser<T> {
-  private final ParseFrom<T> parseFrom;
+  private final ParseFromByteString<T> parseFromByteString;
 
-  @FunctionalInterface
-  public interface ParseFrom<T> {
-    T parseFrom(ByteString bytes) throws InvalidProtocolBufferException;
-  }
-
-  public ProtobufValues(ParseFrom<T> parseFrom) {
-    this.parseFrom = parseFrom;
+  public ProtobufValues(ParseFromByteString<T> parseFromByteString) {
+    this.parseFromByteString = parseFromByteString;
   }
 
   @Override
   public T deserialise(Value value) throws Exception {
-    return parseFrom.parseFrom(value.getBytesValue());
+    return parseFromByteString.parseFrom(value.getBytesValue());
   }
 
   @Override

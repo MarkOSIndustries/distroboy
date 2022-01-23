@@ -1,5 +1,8 @@
 package com.markosindustries.distroboy.core.clustering.serialisation;
 
+import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
+import com.markosindustries.distroboy.core.iterators.MappingIterator;
+import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResources;
 import com.markosindustries.distroboy.schemas.Value;
 import java.util.Iterator;
 
@@ -35,21 +38,34 @@ public interface Serialiser<T> {
    * @return An {@link Iterator} of deserialised objects
    */
   default Iterator<T> deserialiseIterator(Iterator<Value> values) {
-    return new Iterator<T>() {
-      @Override
-      public boolean hasNext() {
-        return values.hasNext();
-      }
+    return new MappingIterator<>(
+        values,
+        value -> {
+          try {
+            return deserialise(value);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
+  }
 
-      @Override
-      public T next() {
-        try {
-          return deserialise(values.next());
-        } catch (Exception e) {
-          // TODO: is this the right thing to do here?
-          throw new RuntimeException(e);
-        }
-      }
-    };
+  /**
+   * Convenience method for converting an {@link IteratorWithResources} of {@link Value}s to an
+   * iterator of objects by deserialising each item
+   *
+   * @param values The {@link Iterator} of {@link Value}s to deserialise
+   * @return An {@link Iterator} of deserialised objects
+   */
+  default IteratorWithResources<T> deserialiseIteratorWithResources(
+      IteratorWithResources<Value> values) {
+    return new MappingIteratorWithResources<>(
+        values,
+        value -> {
+          try {
+            return deserialise(value);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
   }
 }

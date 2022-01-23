@@ -1,6 +1,7 @@
 package com.markosindustries.distroboy.core.clustering.serialisation;
 
 import com.google.protobuf.MessageLite;
+import com.markosindustries.distroboy.core.protobuf.ParseFromByteString;
 
 /** Provides singletons and factory methods for default serialisers */
 public interface Serialisers {
@@ -24,7 +25,7 @@ public interface Serialisers {
   }
 
   static <T extends MessageLite> ProtobufValues<T> protobufValues(
-      ProtobufValues.ParseFrom<T> parseFrom) {
-    return new ProtobufValues<>(parseFrom);
+      ParseFromByteString<T> parseFromByteString) {
+    return new ProtobufValues<>(parseFromByteString);
   }
 }

@@ -21,7 +21,6 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -31,10 +30,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -58,17 +55,15 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   private final Map<ClusterMemberId, ConnectionToClusterMember> memberIdentities;
   private final Cluster cluster;
 
-  public ClusterMember(Cluster cluster)
-      throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  public ClusterMember(Cluster cluster) throws Exception {
     this.cluster = cluster;
     this.jobs = new LinkedBlockingQueue<>();
     this.dataReferenceHashers = new ConcurrentHashMap<>();
     this.memberServer = ServerBuilder.forPort(cluster.memberPort).addService(this).build().start();
 
-    try {
-      log.debug("{} - joining lobby", cluster.clusterName);
-      final var coordinator =
-          new ConnectionToCoordinator(cluster.coordinatorHost, cluster.coordinatorPort);
+    log.debug("{} - joining lobby", cluster.clusterName);
+    try (final var coordinator =
+        new ConnectionToCoordinator(cluster.coordinatorHost, cluster.coordinatorPort)) {
       ClusterMembers clusterMembers =
           coordinator.joinCluster(
               cluster.clusterName,
@@ -193,25 +188,30 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     final var persistedData =
         cluster.persistedData.retrieve(
             DataReferenceId.fromBytes(request.getReference().getReferenceId()));
-    final var iterator = persistedData.getSerialisingIterator();
-    long startInclusive = request.getRange().getStartInclusive();
-    long endExclusive = request.getRange().getEndExclusive();
-    long currentIndex = 0;
-    while (iterator.hasNext()) {
-      try {
-        final var value = iterator.next();
-        if (currentIndex < startInclusive) {
-          continue;
+    try (final var iterator = persistedData.getSerialisingIterator()) {
+      long startInclusive = request.getRange().getStartInclusive();
+      long endExclusive = request.getRange().getEndExclusive();
+      long currentIndex = 0;
+      while (iterator.hasNext()) {
+        try {
+          final var value = iterator.next();
+          if (currentIndex < startInclusive) {
+            continue;
+          }
+          if (currentIndex >= endExclusive) {
+            break;
+          }
+          responseObserver.onNext(value);
+        } finally {
+          currentIndex++;
         }
-        if (currentIndex >= endExclusive) {
-          break;
-        }
-        responseObserver.onNext(value);
-      } finally {
-        currentIndex++;
       }
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      log.warn("Failed to close persisted data iterator - likely resource leakage", e);
+      responseObserver.onError(Status.INTERNAL.asException());
+      throw new RuntimeException(e);
     }
-    responseObserver.onCompleted();
   }
 
   @Override
@@ -240,14 +240,19 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
         classifiersForDataReference.poll();
         // TODO: backpressure
         final var persistedData = cluster.persistedData.retrieve(referenceId);
-        final var iterator = persistedData.getIteratorWithSerialiser();
-        while (iterator.hasNext()) {
-          final var next = iterator.next();
-          final var hash = Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
-          hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
-        }
-        for (StreamObserver<Value> retriever : hashedDataReference.retrieversByHash.values()) {
-          retriever.onCompleted();
+        try (final var iterator = persistedData.getIteratorWithSerialiser()) {
+          while (iterator.hasNext()) {
+            final var next = iterator.next();
+            final var hash = Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
+            hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
+          }
+          for (StreamObserver<Value> retriever : hashedDataReference.retrieversByHash.values()) {
+            retriever.onCompleted();
+          }
+        } catch (Exception e) {
+          log.warn("Failed to close persisted data iterator - likely resource leakage", e);
+          responseObserver.onError(Status.INTERNAL.asException());
+          throw new RuntimeException(e);
         }
       }
     }
@@ -341,8 +346,13 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     try {
       memberServer.shutdown();
       memberServer.awaitTermination();
+      for (ConnectionToClusterMember member : members) {
+        log.debug("Closing - shutting down connection to {}", member);
+        member.close();
+      }
     } catch (Throwable t) {
-      log.error("Couldn't shut down cluster member server - potential resource leakage", t);
+      log.error(
+          "Couldn't shut down cluster member server/connections - potential resource leakage", t);
       throw t;
     }
   }

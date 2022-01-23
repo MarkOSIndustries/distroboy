@@ -5,6 +5,7 @@ import com.markosindustries.distroboy.schemas.CoordinatorEvent;
 import com.markosindustries.distroboy.schemas.CoordinatorGrpc;
 import com.markosindustries.distroboy.schemas.JoinCluster;
 import com.markosindustries.distroboy.schemas.MemberEvent;
+import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -17,18 +18,19 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent> {
+public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ConnectionToCoordinator.class);
 
   private final CoordinatorGrpc.CoordinatorFutureStub coordinator;
   private final StreamObserver<MemberEvent> coordinatorStream;
   private final String coordinatorHost;
   private final int coordinatorPort;
+  private final ManagedChannel channel;
 
   public ConnectionToCoordinator(String coordinatorHost, int coordinatorPort) {
     this.coordinatorHost = coordinatorHost;
     this.coordinatorPort = coordinatorPort;
-    final var channel =
+    this.channel =
         ManagedChannelBuilder.forAddress(coordinatorHost, coordinatorPort).usePlaintext().build();
     this.coordinator = CoordinatorGrpc.newFutureStub(channel);
     this.coordinatorStream = CoordinatorGrpc.newStub(channel).connect(this);
@@ -96,6 +98,14 @@ public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>
         log.error("JoinCluster failed in an unexpected manner, failing", ex);
         throw ex;
       }
+    }
+  }
+
+  @Override
+  public void close() throws Exception {
+    channel.shutdown();
+    while (!channel.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+      log.debug("Awaiting shutdown of channel to Cluster peer");
     }
   }
 }

@@ -10,20 +10,23 @@ import com.markosindustries.distroboy.schemas.DataReferences;
 import com.markosindustries.distroboy.schemas.DataSourceRange;
 import com.markosindustries.distroboy.schemas.HostAndPort;
 import com.markosindustries.distroboy.schemas.Value;
+import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConnectionToClusterMember {
+public class ConnectionToClusterMember implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ConnectionToClusterMember.class);
 
   private final ClusterMemberGrpc.ClusterMemberBlockingStub member;
   private final HostAndPort hostAndPort;
+  private final ManagedChannel channel;
 
   public ConnectionToClusterMember(HostAndPort hostAndPort) {
-    final var channel =
+    this.channel =
         ManagedChannelBuilder.forAddress(hostAndPort.getHost(), hostAndPort.getPort())
             .usePlaintext()
             .build();
@@ -58,6 +61,14 @@ public class ConnectionToClusterMember {
 
   public void disband() {
     member.disband(Empty.newBuilder().build());
+  }
+
+  @Override
+  public void close() throws Exception {
+    channel.shutdown();
+    while (!channel.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+      log.debug("Awaiting shutdown of channel to Cluster peer");
+    }
   }
 
   @Override

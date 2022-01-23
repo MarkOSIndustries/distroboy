@@ -107,8 +107,7 @@ public final class Cluster implements AutoCloseable {
      * @throws InterruptedException If interrupted while joining the cluster
      * @throws TimeoutException If the cluster doesn't start within the lobbyTimeout
      */
-    public Cluster join()
-        throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    public Cluster join() throws Exception {
       return new Cluster(
           clusterName,
           expectedClusterMembers,
@@ -135,7 +134,7 @@ public final class Cluster implements AutoCloseable {
       int coordinatorPort,
       Duration coordinatorLobbyTimeout,
       int memberPort)
-      throws IOException, ExecutionException, InterruptedException, TimeoutException {
+      throws Exception {
     this.clusterName = clusterName;
     this.expectedClusterMembers = expectedClusterMembers;
     this.coordinatorHost = coordinatorHost;
