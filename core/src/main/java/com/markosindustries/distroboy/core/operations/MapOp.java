@@ -12,6 +12,12 @@ import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResource
  */
 @FunctionalInterface
 public interface MapOp<I, O> extends ListOp<I, O> {
+  /**
+   * Transform an input to the output type
+   *
+   * @param input The value to be mapped
+   * @return The result of the map operation
+   */
   O map(I input);
 
   @Override

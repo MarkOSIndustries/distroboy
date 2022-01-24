@@ -11,11 +11,24 @@ import com.markosindustries.distroboy.schemas.DataReference;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Have each node in the cluster persist its fragment of the data to the heap. <b>WARNING:</b> if
+ * the data doesn't fit in the available heap memory, the entire job will fail.
+ *
+ * @param <I> The type of the data being persisted
+ */
 public class PersistToHeap<I>
     implements Operation<I, DataReference, PersistedDataReferenceList<I>> {
   private final Cluster cluster;
   private final Serialiser<I> serialiser;
 
+  /**
+   * Have each node in the cluster persist its fragment of the data to the heap. <b>WARNING:</b> if
+   * the data doesn't fit in the available heap memory, the entire job will fail.
+   *
+   * @param cluster The {@link Cluster} on which data is being persisted
+   * @param serialiser A {@link Serialiser} for the data being persisted
+   */
   public PersistToHeap(Cluster cluster, Serialiser<I> serialiser) {
     this.cluster = cluster;
     this.serialiser = serialiser;

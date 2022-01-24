@@ -4,9 +4,17 @@ import com.google.protobuf.ByteString;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * An identifier for a set of data on the cluster. Used to distribute the existence of that data to
+ * other cluster members
+ */
 public class DataReferenceId {
   private final UUID uuid;
 
+  /**
+   * An identifier for a set of data on the cluster Used to distribute the existence of that data to
+   * other cluster members
+   */
   public DataReferenceId() {
     this.uuid = UUID.randomUUID();
   }
@@ -15,14 +23,30 @@ public class DataReferenceId {
     this.uuid = uuid;
   }
 
+  /**
+   * Get the UUID of this Id
+   *
+   * @return The UUID
+   */
   public UUID getUUID() {
     return uuid;
   }
 
+  /**
+   * Serialise this Id to a {@link ByteString}
+   *
+   * @return the serialised Id
+   */
   public ByteString asBytes() {
     return UUIDs.asBytes(uuid);
   }
 
+  /**
+   * Deserialise a {@link ByteString} to the equivalent {@link DataReferenceId}
+   *
+   * @param bytes The bytes representing the Id
+   * @return The deserialised Id
+   */
   public static DataReferenceId fromBytes(ByteString bytes) {
     return new DataReferenceId(UUIDs.fromBytes(bytes));
   }

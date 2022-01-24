@@ -38,6 +38,11 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Implementation of a ClusterMember's capabilities and responsibilities Responsible for cluster
+ * startup, answering queries from other members, and delegating work and queries to other cluster
+ * members.
+ */
 public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ClusterMember.class);
@@ -55,6 +60,12 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   private final Map<ClusterMemberId, ConnectionToClusterMember> memberIdentities;
   private final Cluster cluster;
 
+  /**
+   * Create a new ClusterMember, and join the specified cluster
+   *
+   * @param cluster The details of the cluster to participate in
+   * @throws Exception If joining the cluster fails
+   */
   public ClusterMember(Cluster cluster) throws Exception {
     this.cluster = cluster;
     this.jobs = new LinkedBlockingQueue<>();
@@ -90,12 +101,29 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     }
   }
 
+  /**
+   * Is this cluster member the leader?
+   *
+   * @return <code>true</code> if the leader, otherwise <code>false</code>
+   */
   public boolean isLeader() {
     return isLeader;
   }
 
+  /**
+   * Partition the DataSource into equally sized ranges (one per member), and instruct each member
+   * to process its assigned range.
+   *
+   * @param dataSource The data source to distribute across the cluster
+   * @param <I> The type of values in the data source
+   * @return A future of collected value iterators for each cluster member
+   * @throws IllegalStateException if this member is not the cluster leader
+   */
   public <I> List<CompletableFuture<Iterator<Value>>> distributeDataSource(
       DataSource<I> dataSource) {
+    if (!isLeader()) {
+      throw new IllegalStateException("Only the leader should distributed work to other members");
+    }
     final var dataSourceRanges = generateRanges(dataSource.countOfFullSet(), members.length);
     final var memberJobs =
         new ArrayList<CompletableFuture<Iterator<Value>>>(dataSourceRanges.length);
@@ -107,11 +135,30 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     return memberJobs;
   }
 
+  /**
+   * Retrieve a range of values from some data referenced on another cluster member. Happens
+   * immediately, there is no attempt to do a single-pass of the range.
+   *
+   * @param memberId The id of the cluster member holding the referenced data
+   * @param dataReferenceRange The range of data to retrieve
+   * @return An iterator for the Values stored in the given range
+   */
   public Iterator<Value> retrieveRangeFromMember(
       ClusterMemberId memberId, DataReferenceRange dataReferenceRange) {
     return getMember(memberId).retrieveRange(dataReferenceRange);
   }
 
+  /**
+   * Retrieve all values matching a given hash/modulo. Waits until a classifier/hasher have been
+   * specified for the given reference, and then waits until retrievals have been requested for all
+   * possible modulo values. Once this happens, a single pass over the data reference values will
+   * occur, hashing and distributing values to the waiting retrievers based on their requested
+   * modulo.
+   *
+   * @param memberId The id of the cluster member holding the referenced data
+   * @param dataReferenceHashSpec The spec for the data reference and hash/modulo to retrieve
+   * @return An iterator for the Values from the referenced data matching the hash/modulo spec
+   */
   public Iterator<Value> retrieveByHashFromMember(
       ClusterMemberId memberId, DataReferenceHashSpec dataReferenceHashSpec) {
     return getMember(memberId).retrieveByHash(dataReferenceHashSpec);
@@ -292,6 +339,15 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     }
   }
 
+  /**
+   * Add a hash function expected to be used in a retrieval for a part of the job being run
+   *
+   * @param dataReference The data reference being hashed/retrieved
+   * @param hasher The hashing function to be used
+   * @param expectedRetrieveCount The number of retrievers who will ask, so that we can wait for
+   *     everyone to do a single pass
+   * @param <T> The type of values being retrieved/hashed.
+   */
   public <T> void pushHasher(
       DataReference dataReference, Function<T, Integer> hasher, int expectedRetrieveCount) {
     synchronized (classifiersLock) {
@@ -305,16 +361,34 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     }
   }
 
+  /**
+   * Add a job to be executed by the cluster. Jobs are always executed in the order they are added.
+   * This ensures that all cluster members are working on the same job at the same time, since they
+   * all have the same code.
+   *
+   * @param job The next job to be executed
+   */
   public void addJob(Job job) {
     jobs.add(job);
   }
 
+  /**
+   * As the leader, tell the rest of the cluster about data stored on cluster members
+   *
+   * @param remoteDataReferences The references to the data being distributed
+   */
   public void distributeDataReferences(List<DataReference> remoteDataReferences) {
     for (ConnectionToClusterMember member : members) {
       member.distribute(remoteDataReferences);
     }
   }
 
+  /**
+   * Wait for the leader to distribute references to some data stored on cluster members
+   *
+   * @return The data references distributed by the leader
+   * @throws InterruptedException If interrupted while waiting
+   */
   public List<DataReference> awaitDistributedDataReferences() throws InterruptedException {
     synchronized (distributedReferencesLock) {
       while (distributedReferences.get() == null) {

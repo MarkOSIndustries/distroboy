@@ -21,7 +21,13 @@ import java.util.Map;
  */
 public interface GroupByOp<I, II extends Iterator<I>, K>
     extends Operation<II, Map.Entry<K, List<I>>, Map<K, List<I>>> {
-  K classify(I output);
+  /**
+   * Given an input, derive a key used to group items with the same key together
+   *
+   * @param input The value to derive a key for
+   * @return They key corresponding to the given input
+   */
+  K classify(I input);
 
   @Override
   default IteratorWithResources<Map.Entry<K, List<I>>> apply(IteratorWithResources<II> input)

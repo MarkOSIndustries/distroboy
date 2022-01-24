@@ -11,6 +11,11 @@ import java.util.Iterator;
  * @param <I> The type of the input data set items
  */
 public interface ForEachOp<I> extends Operation<I, Void, Void> {
+  /**
+   * Do something with the given value
+   *
+   * @param input The value to perform some action with
+   */
   void forEach(I input);
 
   @Override

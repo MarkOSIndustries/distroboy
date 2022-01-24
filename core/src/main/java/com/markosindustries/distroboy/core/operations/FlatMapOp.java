@@ -12,6 +12,12 @@ import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
  * @param <O> The type of the output data set items
  */
 public interface FlatMapOp<I, O> extends ListOp<I, O> {
+  /**
+   * Given some input, produce an {@link IteratorWithResources} of outputs
+   *
+   * @param input The value to derive multiple outputs for
+   * @return An {@link IteratorWithResources} of outputs
+   */
   IteratorWithResources<O> flatMap(I input);
 
   @Override

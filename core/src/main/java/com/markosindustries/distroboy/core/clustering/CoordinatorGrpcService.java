@@ -19,10 +19,17 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Implementation of the Coordinator's GRPC interface */
 public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase {
   private static final Logger log = LoggerFactory.getLogger(CoordinatorGrpcService.class);
   private final RemoteAddressProvider remoteAddressProvider;
 
+  /**
+   * Implementation of the Coordinator's GRPC interface
+   *
+   * @param remoteAddressProvider Needed to determine cluster member IP addresses as they join a
+   *     cluster
+   */
   public CoordinatorGrpcService(RemoteAddressProvider remoteAddressProvider) {
     this.remoteAddressProvider = remoteAddressProvider;
   }

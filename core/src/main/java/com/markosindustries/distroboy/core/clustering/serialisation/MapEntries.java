@@ -11,6 +11,12 @@ public class MapEntries<K, V> implements Serialiser<Map.Entry<K, V>> {
   private final Serialiser<K> keySerialiser;
   private final Serialiser<V> valueSerialiser;
 
+  /**
+   * Create a MapEntries serialiser
+   *
+   * @param keySerialiser The serialiser for the key type the maps contain
+   * @param valueSerialiser The serialiser for the value type the maps contain
+   */
   public MapEntries(Serialiser<K> keySerialiser, Serialiser<V> valueSerialiser) {
     this.keySerialiser = keySerialiser;
     this.valueSerialiser = valueSerialiser;

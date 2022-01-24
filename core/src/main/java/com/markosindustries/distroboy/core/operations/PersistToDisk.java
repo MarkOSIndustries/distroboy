@@ -16,11 +16,24 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.Iterator;
 
+/**
+ * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if the
+ * data doesn't fit in the available temp dir space, the entire job will fail.
+ *
+ * @param <I> The type of the data being persisted
+ */
 public class PersistToDisk<I>
     implements Operation<I, DataReference, PersistedDataReferenceList<I>> {
   private final Cluster cluster;
   private final Serialiser<I> serialiser;
 
+  /**
+   * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if the
+   * data doesn't fit in the available temp dir space, the entire job will fail.
+   *
+   * @param cluster The {@link Cluster} on which data is being persisted
+   * @param serialiser A {@link Serialiser} for the data being persisted
+   */
   public PersistToDisk(Cluster cluster, Serialiser<I> serialiser) {
     this.cluster = cluster;
     this.serialiser = serialiser;

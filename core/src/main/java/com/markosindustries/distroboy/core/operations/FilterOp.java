@@ -10,6 +10,13 @@ import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
  * @param <I> The type of the data set items
  */
 public interface FilterOp<I> extends ListOp<I, I> {
+  /**
+   * Determine whether a given value should be passed through to the output of this operation
+   *
+   * @param input The value to decide whether to include or omit from output
+   * @return <code>true</code> if the value should be included, or <code>false</code> if it should
+   *     be omitted
+   */
   boolean filter(I input);
 
   @Override

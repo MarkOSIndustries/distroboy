@@ -72,6 +72,12 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
     protected final DataSource<I> dataSource;
     protected final Operand<O, CO> operand;
 
+    /**
+     * Start a new {@link DistributedOpSequence} builder
+     *
+     * @param dataSource The {@link DataSource} for the operation sequence to start from
+     * @param operand The last operand in the chain of operations
+     */
     Builder(DataSource<I> dataSource, Operand<O, CO> operand) {
       this.dataSource = dataSource;
       this.operand = operand;
@@ -198,6 +204,7 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Have each node in the cluster persist its fragment of the data to the heap. <b>WARNING:</b>
      * if the data doesn't fit in the available heap memory, the entire job will fail.
      *
+     * @param cluster The {@link Cluster} on which data is being persisted
      * @param serialiser A {@link Serialiser} for the data being persisted
      * @return A new {@link DistributedOpSequence} whose result will be a set of {@link
      *     DataReference}s to the data stored on each node
@@ -214,6 +221,7 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if
      * the data doesn't fit in the available temp dir space, the entire job will fail.
      *
+     * @param cluster The {@link Cluster} on which data is being persisted
      * @param serialiser A {@link Serialiser} for the data being persisted
      * @return A new {@link DistributedOpSequence} whose result will be a set of {@link
      *     DataReference}s to the data stored on each node
@@ -230,6 +238,7 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Perform an efficient once-only redistribution and groupBy via distributed iterator
      * references.
      *
+     * @param cluster The cluster which should be used to redistribute based on the keys classified
      * @param classifier Given an input I, returns a grouping key K, which will be hashed
      * @param hasher A function which takes the grouping key K, and hashes it to a number in Integer
      *     space
@@ -237,6 +246,7 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * @param serialiser A {@link Serialiser} for the data being moved around the cluster.
      * @param <K> The type of the key to group by (and which will be hashed for redistribution)
      * @return A new {@link DistributedOpSequence.HashMapBuilder}
+     * @throws InterruptedException if interrupted while orchestrating the redistribution
      */
     public <K> HashMapBuilder<Integer, K, List<O>> redistributeAndGroupBy(
         Cluster cluster,

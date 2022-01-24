@@ -8,6 +8,12 @@ import com.markosindustries.distroboy.schemas.Value;
 public class ProtobufValues<T extends MessageLite> implements Serialiser<T> {
   private final ParseFromByteString<T> parseFromByteString;
 
+  /**
+   * Default serialiser for protobuf {@link MessageLite}s
+   *
+   * @param parseFromByteString The parseFrom method of the specified protobuf type (eg: <code>
+   *     MyProtobuf::parseFrom</code>)
+   */
   public ProtobufValues(ParseFromByteString<T> parseFromByteString) {
     this.parseFromByteString = parseFromByteString;
   }

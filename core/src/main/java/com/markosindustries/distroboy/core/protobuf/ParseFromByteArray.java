@@ -10,5 +10,12 @@ import com.google.protobuf.MessageLite;
  */
 @FunctionalInterface
 public interface ParseFromByteArray<T extends MessageLite> {
+  /**
+   * Parse a byte[] as the protobuf type {@link T}
+   *
+   * @param bytes The byte array containing the serialised protobuf
+   * @return An instance of the protobuf type {@link T}
+   * @throws InvalidProtocolBufferException If the bytes do not represent a valid protobuf record
+   */
   T parseFrom(byte[] bytes) throws InvalidProtocolBufferException;
 }

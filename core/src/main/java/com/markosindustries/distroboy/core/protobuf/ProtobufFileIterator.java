@@ -10,12 +10,24 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+/**
+ * An iterator for a file written using protobuf's varint-length-prefixed format
+ *
+ * @param <T> The type of protobuf records in the file
+ */
 public class ProtobufFileIterator<T extends MessageLite> implements IteratorWithResources<T> {
   private final DataInputStream input;
   private final ParseFromByteArray<T> parseFrom;
   private boolean hasNext;
   private int nextMessageSize;
 
+  /**
+   * An iterator for a file written using protobuf's varint-length-prefixed format
+   *
+   * @param file The file containing the records
+   * @param parseFrom The protobuf type's parseFrom method to deserialise the records
+   * @throws FileNotFoundException If the file doesn't exist
+   */
   public ProtobufFileIterator(final File file, ParseFromByteArray<T> parseFrom)
       throws FileNotFoundException {
     this.input = new DataInputStream(new FileInputStream(file));

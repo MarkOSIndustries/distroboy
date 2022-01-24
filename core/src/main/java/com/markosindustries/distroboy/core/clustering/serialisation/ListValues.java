@@ -10,6 +10,11 @@ import java.util.stream.Collectors;
 public class ListValues<T> implements Serialiser<List<T>> {
   private final Serialiser<T> serialiser;
 
+  /**
+   * Create a ListValues serialiser
+   *
+   * @param serialiser The serialiser for the type the lists contain
+   */
   public ListValues(Serialiser<T> serialiser) {
     this.serialiser = serialiser;
   }

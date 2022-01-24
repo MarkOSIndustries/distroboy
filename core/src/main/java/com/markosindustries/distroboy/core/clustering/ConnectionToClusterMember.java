@@ -18,14 +18,16 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConnectionToClusterMember implements AutoCloseable {
+/** Represents a connection to a cluster member */
+class ConnectionToClusterMember implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ConnectionToClusterMember.class);
 
   private final ClusterMemberGrpc.ClusterMemberBlockingStub member;
   private final HostAndPort hostAndPort;
   private final ManagedChannel channel;
 
-  public ConnectionToClusterMember(HostAndPort hostAndPort) {
+  /** Represents a connection to a cluster member */
+  ConnectionToClusterMember(HostAndPort hostAndPort) {
     this.channel =
         ManagedChannelBuilder.forAddress(hostAndPort.getHost(), hostAndPort.getPort())
             .usePlaintext()

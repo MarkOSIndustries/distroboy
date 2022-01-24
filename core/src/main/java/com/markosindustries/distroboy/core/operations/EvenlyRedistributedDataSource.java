@@ -10,9 +10,21 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
+/**
+ * Given a list of references to persisted data, redistribute the results evenly across the cluster
+ * for further processing.
+ *
+ * @param <I> The type of data stored in the references
+ */
 public class EvenlyRedistributedDataSource<I> implements DataSource<DataReferenceRange> {
   private final List<DataReference> dataReferences;
 
+  /**
+   * Given a list of references to persisted data, redistribute the results evenly across the
+   * cluster for further processing.
+   *
+   * @param dataReferences The references to persisted data to redistribute
+   */
   public EvenlyRedistributedDataSource(PersistedDataReferenceList<I> dataReferences) {
     this.dataReferences = dataReferences.list();
     this.count = this.dataReferences.stream().mapToLong(DataReference::getCount).sum();

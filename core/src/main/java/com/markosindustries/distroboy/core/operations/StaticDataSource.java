@@ -14,6 +14,12 @@ import java.util.Collection;
 public class StaticDataSource<I> implements DataSource<I> {
   private final Collection<I> data;
 
+  /**
+   * A data source which came from an in memory collection. Typically, this is for internal use by
+   * distroboy when doing dataset redistributions (eg: hashing and grouping).
+   *
+   * @param data The data to use as the source
+   */
   public StaticDataSource(Collection<I> data) {
     this.data = unmodifiableCollection(data);
   }

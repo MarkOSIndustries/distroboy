@@ -18,7 +18,8 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoCloseable {
+/** Represents a connection to the coordinator */
+class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ConnectionToCoordinator.class);
 
   private final CoordinatorGrpc.CoordinatorFutureStub coordinator;
@@ -27,7 +28,8 @@ public class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>
   private final int coordinatorPort;
   private final ManagedChannel channel;
 
-  public ConnectionToCoordinator(String coordinatorHost, int coordinatorPort) {
+  /** Represents a connection to the coordinator */
+  ConnectionToCoordinator(String coordinatorHost, int coordinatorPort) {
     this.coordinatorHost = coordinatorHost;
     this.coordinatorPort = coordinatorPort;
     this.channel =
