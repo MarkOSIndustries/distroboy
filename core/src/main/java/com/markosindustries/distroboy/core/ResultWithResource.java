@@ -21,10 +21,20 @@ public class ResultWithResource<T> {
     this.resource = resource;
   }
 
+  /**
+   * Return the encapsulated result
+   *
+   * @return The result
+   */
   public T getResult() {
     return result;
   }
 
+  /**
+   * Return the encapsulated {@link AutoCloseable}
+   *
+   * @return The {@link AutoCloseable} resource
+   */
   public AutoCloseable getResource() {
     return resource;
   }

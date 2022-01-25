@@ -35,14 +35,29 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
     this.serialiser = serialiser;
   }
 
+  /**
+   * The {@link DataSource} this operation sequence will draw from
+   *
+   * @return The {@link DataSource}
+   */
   public DataSource<Input> getDataSource() {
     return dataSource;
   }
 
+  /**
+   * The tail of the operation sequence
+   *
+   * @return The last operand in the sequence
+   */
   public Operand<Outcome, CollectedOutcome> getOperand() {
     return operand;
   }
 
+  /**
+   * The serialiser required to move the Outcome values of this sequence around the cluster
+   *
+   * @return The serialiser
+   */
   public Serialiser<Outcome> getSerialiser() {
     return serialiser;
   }
@@ -69,7 +84,9 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
    * @param <CO> The type of data the sequence will collect on the cluster leader
    */
   public static class Builder<I, O, CO> {
+    /** The {@link DataSource} this operation sequence will draw from */
     protected final DataSource<I> dataSource;
+    /** The current end of the operation sequence */
     protected final Operand<O, CO> operand;
 
     /**
@@ -358,7 +375,9 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
     }
 
     /**
-     * Transform the keys and values for each item in the data set independently
+     * Transform the keys and values for each item in the data set independently of each other If
+     * you need to map the keys and values in context of each other - use {@link
+     * #map(HashMapToListOp)}
      *
      * @param hashMapKeysAndValuesOp The key/value mapping operation
      * @param <K2> The new type of the keys

@@ -6,7 +6,8 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 
 import com.markosindustries.distroboy.core.clustering.ClusterMember;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
-import com.markosindustries.distroboy.core.clustering.PersistedData;
+import com.markosindustries.distroboy.core.clustering.DataReferenceId;
+import com.markosindustries.distroboy.core.clustering.DistributableDataReference;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.iterators.FlatMappingIterator;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
@@ -118,14 +119,23 @@ public final class Cluster implements AutoCloseable {
     }
   }
 
+  /** The name of this cluster */
   public final String clusterName;
+  /** The number of cluster members expected */
   public final int expectedClusterMembers;
+  /** The host of the coordinator */
   public final String coordinatorHost;
+  /** The port the coordinator is running on */
   public final int coordinatorPort;
+  /**
+   * The timeout for the coordinator to notify this member that all members are present and the
+   * cluster can start processing jobs
+   */
   public final Duration coordinatorLobbyTimeout;
+  /** The port this member is listening on for connections from peers */
   public final int memberPort;
+  /** The unique id of this cluster member */
   public final ClusterMemberId clusterMemberId;
-  public final PersistedData persistedData;
 
   private Cluster(
       String clusterName,
@@ -142,13 +152,27 @@ public final class Cluster implements AutoCloseable {
     this.coordinatorLobbyTimeout = coordinatorLobbyTimeout;
     this.memberPort = memberPort;
     this.clusterMemberId = new ClusterMemberId();
-    this.persistedData = new PersistedData();
     this.clusterMember = new ClusterMember(this);
   }
 
   @Override
   public void close() throws Exception {
     clusterMember.close();
+  }
+
+  /**
+   * Add a DistributableDataReference to the accessible set for other cluster members to retrieve.
+   * Expected to be called when persistence-type operations are running
+   *
+   * @see com.markosindustries.distroboy.core.operations.PersistToDisk
+   * @see com.markosindustries.distroboy.core.operations.PersistToHeap
+   * @param referenceId The identifier of the reference
+   * @param distributableDataReference A distributable reference to some data
+   * @param <I> The type of values contained in the referenced data
+   */
+  public <I> void addDistributableData(
+      DataReferenceId referenceId, DistributableDataReference<I> distributableDataReference) {
+    clusterMember.addDistributableData(referenceId, distributableDataReference);
   }
 
   private <I, O> List<DataReference> distributeReferencesRaw(

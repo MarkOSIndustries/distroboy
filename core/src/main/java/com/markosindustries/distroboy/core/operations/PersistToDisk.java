@@ -4,7 +4,7 @@ import com.google.protobuf.CodedOutputStream;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.DataReferenceId;
-import com.markosindustries.distroboy.core.clustering.PersistedDataReference;
+import com.markosindustries.distroboy.core.clustering.DistributableDataReference;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.iterators.IteratorTo;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
@@ -57,9 +57,9 @@ public class PersistToDisk<I>
     }
 
     final DataReferenceId referenceId = new DataReferenceId();
-    cluster.persistedData.store(
+    cluster.addDistributableData(
         referenceId,
-        new PersistedDataReference<>(
+        new DistributableDataReference<>(
             () -> {
               try {
                 return serialiser.deserialiseIteratorWithResources(
@@ -68,7 +68,8 @@ public class PersistToDisk<I>
                 throw new RuntimeException(e);
               }
             },
-            serialiser));
+            serialiser,
+            true));
 
     return IteratorWithResources.of(
         DataReference.newBuilder()

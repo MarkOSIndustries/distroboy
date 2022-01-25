@@ -13,6 +13,13 @@ import java.util.Map;
  * @param <O> The type of values in the output list
  */
 public interface HashMapToListOp<K, V, O> extends ListOp<Map.Entry<K, V>, O> {
+  /**
+   * Transform a key-value pair into the output type
+   *
+   * @param key The key
+   * @param value The value
+   * @return The result of mapping the key-value pair
+   */
   O map(K key, V value);
 
   @Override

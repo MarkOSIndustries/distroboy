@@ -59,6 +59,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   private final boolean isLeader;
   private final Map<ClusterMemberId, ConnectionToClusterMember> memberIdentities;
   private final Cluster cluster;
+  private final DistributableData distributableData;
 
   /**
    * Create a new ClusterMember, and join the specified cluster
@@ -70,6 +71,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     this.cluster = cluster;
     this.jobs = new LinkedBlockingQueue<>();
     this.dataReferenceHashers = new ConcurrentHashMap<>();
+    this.distributableData = new DistributableData();
     this.memberServer = ServerBuilder.forPort(cluster.memberPort).addService(this).build().start();
 
     log.debug("{} - joining lobby", cluster.clusterName);
@@ -164,6 +166,21 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     return getMember(memberId).retrieveByHash(dataReferenceHashSpec);
   }
 
+  /**
+   * Add a DistributableDataReference to the accessible set for other cluster members to retrieve.
+   * Expected to be called when persistence-type operations are running
+   *
+   * @see com.markosindustries.distroboy.core.operations.PersistToDisk
+   * @see com.markosindustries.distroboy.core.operations.PersistToHeap
+   * @param referenceId The identifier of the reference
+   * @param distributableDataReference A distributable reference to some data
+   * @param <I> The type of values contained in the referenced data
+   */
+  public <I> void addDistributableData(
+      DataReferenceId referenceId, DistributableDataReference<I> distributableDataReference) {
+    distributableData.add(referenceId, distributableDataReference);
+  }
+
   private ConnectionToClusterMember getMember(ClusterMemberId memberId) {
     return memberIdentities.get(memberId);
   }
@@ -232,10 +249,10 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     }
 
     // TODO: backpressure
-    final var persistedData =
-        cluster.persistedData.retrieve(
+    final var distributableDataReference =
+        distributableData.retrieve(
             DataReferenceId.fromBytes(request.getReference().getReferenceId()));
-    try (final var iterator = persistedData.getSerialisingIterator()) {
+    try (final var iterator = distributableDataReference.getSerialisingIterator()) {
       long startInclusive = request.getRange().getStartInclusive();
       long endExclusive = request.getRange().getEndExclusive();
       long currentIndex = 0;
@@ -286,10 +303,12 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
         // pop this one off the queue, it's being handled now
         classifiersForDataReference.poll();
         // TODO: backpressure
-        final var persistedData = cluster.persistedData.retrieve(referenceId);
-        try (final var iterator = persistedData.getIteratorWithSerialiser()) {
-          while (iterator.hasNext()) {
-            final var next = iterator.next();
+        final var distributableDataReference = distributableData.retrieve(referenceId);
+
+        try (final var iteratorWithSerialiser =
+            distributableDataReference.getIteratorWithSerialiser()) {
+          while (iteratorWithSerialiser.hasNext()) {
+            final var next = iteratorWithSerialiser.next();
             final var hash = Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
             hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
           }

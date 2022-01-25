@@ -53,8 +53,8 @@ public interface Serialisers {
    * Serialiser factory for protobuf values
    *
    * @param parseFromByteString The protobuf type's <code>
-   *     parseFrom({@link com.google.protobuf.ByteString} method (eg: <code>MyProtobuf::parseFrom</code>)
-   *     </code>
+   *     parseFrom({@link com.google.protobuf.ByteString})</code> method (eg: <code>
+   *     MyProtobuf::parseFrom</code>)
    * @param <T> The protobuf type to be serialised
    * @return A serialiser for the given protobuf type
    */

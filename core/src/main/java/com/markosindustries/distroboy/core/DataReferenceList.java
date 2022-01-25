@@ -28,6 +28,11 @@ public class DataReferenceList<T> implements Iterable<DataReference> {
     return dataReferences.iterator();
   }
 
+  /**
+   * Return the list of {@link DataReference}s - stripping type information in the process
+   *
+   * @return The untyped list of {@link DataReference}s
+   */
   public List<DataReference> list() {
     return dataReferences;
   }

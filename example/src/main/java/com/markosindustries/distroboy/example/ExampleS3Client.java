@@ -8,8 +8,8 @@ import com.markosindustries.distroboy.aws.s3.S3KeysSource;
 import com.markosindustries.distroboy.aws.s3.S3ObjectsSource;
 import com.markosindustries.distroboy.aws.s3.parquet.S3ObjectInputFile;
 import com.markosindustries.distroboy.core.Cluster;
-import com.markosindustries.distroboy.core.DataReferenceList;
 import com.markosindustries.distroboy.core.Hashing;
+import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
@@ -35,7 +35,7 @@ public interface ExampleS3Client {
   Logger log = LoggerFactory.getLogger(ExampleS3Client.class);
 
   static void runExampleS3Client(
-      Cluster cluster, ExampleConfig config, DataReferenceList<String> heapPersistedLines)
+      Cluster cluster, ExampleConfig config, PersistedDataReferenceList<String> heapPersistedLines)
       throws URISyntaxException {
     final var s3ClientBuilder = S3Client.builder();
     if (!Strings.isNullOrEmpty(config.s3EndpointOverride())) {

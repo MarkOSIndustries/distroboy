@@ -3,7 +3,7 @@ package com.markosindustries.distroboy.core.operations;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.DataReferenceId;
-import com.markosindustries.distroboy.core.clustering.PersistedDataReference;
+import com.markosindustries.distroboy.core.clustering.DistributableDataReference;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.iterators.IteratorTo;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
@@ -40,9 +40,10 @@ public class PersistToHeap<I>
     final List<I> asList = IteratorTo.list(input);
 
     final DataReferenceId referenceId = new DataReferenceId();
-    cluster.persistedData.store(
+    cluster.addDistributableData(
         referenceId,
-        new PersistedDataReference<>(() -> IteratorWithResources.from(asList), serialiser));
+        new DistributableDataReference<>(
+            () -> IteratorWithResources.from(asList), serialiser, true));
 
     return IteratorWithResources.of(
         DataReference.newBuilder()

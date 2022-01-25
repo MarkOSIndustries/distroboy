@@ -11,16 +11,39 @@ import java.util.List;
  * @param <I> The type of items in the iterator
  */
 public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
+  /**
+   * Produce an {@link IteratorWithResources} which contains the provided elements
+   *
+   * @param <I> The type of elements
+   * @param elements The elements to iterate
+   * @return An {@link IteratorWithResources}
+   */
   @SafeVarargs
   static <I> IteratorWithResources<I> of(I... elements) {
     return from(List.of(elements).iterator());
   }
 
+  /**
+   * Produce an {@link IteratorWithResources} which contains the provided elements, and will close
+   * the provided closeable when {@link IteratorWithResources#close()} is called
+   *
+   * @param <I> The type of elements
+   * @param closeable The resource to close when {@link IteratorWithResources#close()} is called
+   * @param elements The elements to iterate
+   * @return An {@link IteratorWithResources}
+   */
   @SafeVarargs
   static <I> IteratorWithResources<I> of(AutoCloseable closeable, I... elements) {
     return from(List.of(elements).iterator(), closeable);
   }
 
+  /**
+   * Produce an {@link IteratorWithResources} which delegates to the given {@link Iterator}
+   *
+   * @param <I> The type of elements
+   * @param iterator The iterator to delegate to
+   * @return An {@link IteratorWithResources}
+   */
   static <I> IteratorWithResources<I> from(Iterator<I> iterator) {
     return from(
         iterator,
@@ -29,6 +52,14 @@ public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
         });
   }
 
+  /**
+   * Produce an {@link IteratorWithResources} which contains the elements in the given {@link
+   * Iterable}
+   *
+   * @param <I> The type of elements
+   * @param iterable The iterable to iterate
+   * @return An {@link IteratorWithResources}
+   */
   static <I> IteratorWithResources<I> from(Iterable<I> iterable) {
     return from(
         iterable.iterator(),
@@ -37,6 +68,15 @@ public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
         });
   }
 
+  /**
+   * Produce an {@link IteratorWithResources} which delegates to the given {@link Iterator}, and
+   * will close the provided closeable when {@link IteratorWithResources#close()} is called
+   *
+   * @param <I> The type of elements
+   * @param iterator The iterator to delegate to
+   * @param closeable The resource to close when {@link IteratorWithResources#close()} is called
+   * @return An {@link IteratorWithResources}
+   */
   static <I> IteratorWithResources<I> from(Iterator<I> iterator, AutoCloseable closeable) {
     return new IteratorWithResources<I>() {
       @Override
@@ -56,6 +96,12 @@ public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
     };
   }
 
+  /**
+   * Produce an empty {@link IteratorWithResources}
+   *
+   * @param <I> The type of elements
+   * @return An empty {@link IteratorWithResources}
+   */
   static <I> IteratorWithResources<I> emptyIterator() {
     return from(Collections.emptyIterator());
   }
