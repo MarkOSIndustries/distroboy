@@ -6,3 +6,4 @@ build/
 out/
 **/.terraform/
 schemas/gen
+example-schemas/gen
