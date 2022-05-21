@@ -1,7 +1,8 @@
-.idea
-.gradle
-gradle/*
-gradlew*
-build
+.gradle/
+build/
+/.idea/*
+!/.idea/runConfigurations
 *.iml
+out/
+**/.terraform/
 schemas/gen
