@@ -9,7 +9,7 @@ import org.apache.parquet.io.SeekableInputStream;
 public class SimpleInputFile implements InputFile {
   private final File file;
 
-  SimpleInputFile(File file) {
+  public SimpleInputFile(File file) {
     this.file = file;
   }
 

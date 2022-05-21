@@ -8,7 +8,7 @@ import org.apache.parquet.io.SeekableInputStream;
 public class FileBasedSeekableInputStream extends SeekableInputStream {
   private final RandomAccessFile file;
 
-  FileBasedSeekableInputStream(RandomAccessFile file) {
+  public FileBasedSeekableInputStream(RandomAccessFile file) {
     this.file = file;
   }
 
