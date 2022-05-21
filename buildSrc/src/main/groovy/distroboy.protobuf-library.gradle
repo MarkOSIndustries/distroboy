@@ -10,9 +10,9 @@ repositories {
 }
 
 dependencies {
-    api group: 'com.google.protobuf', name: 'protobuf-java', version: '3.19.1'
+    api group: 'com.google.protobuf', name: 'protobuf-java', version: '3.20.1'
 
-    api platform(group: 'io.grpc', name: 'grpc-bom', version: '1.43.1')
+    api platform(group: 'io.grpc', name: 'grpc-bom', version: '1.44.1')
     api (group: 'io.grpc', name: 'grpc-protobuf')
     api (group: 'io.grpc', name: 'grpc-stub')
     api (group: 'io.grpc', name: 'grpc-netty')
@@ -33,11 +33,11 @@ sourceSets {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.19.1"
+        artifact = "com.google.protobuf:protoc:3.20.1"
     }
     plugins {
         grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.43.1'
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.44.1'
         }
     }
     generateProtoTasks {
