@@ -2,12 +2,13 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 
 import com.markosindustries.distroboy.schemas.RepeatedValue;
 import com.markosindustries.distroboy.schemas.Value;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Default serialiser for {@link List}s */
-public class ListValues<T> implements Serialiser<List<T>> {
+/** Default serialiser for {@link Collection}s */
+public class CollectionValues<T, C extends Collection<T>> implements Serialiser<C> {
+  private final Function<Integer, C> newCollectionWithCapacity;
   private final Serialiser<T> serialiser;
 
   /**
@@ -15,12 +16,14 @@ public class ListValues<T> implements Serialiser<List<T>> {
    *
    * @param serialiser The serialiser for the type the lists contain
    */
-  public ListValues(Serialiser<T> serialiser) {
+  public CollectionValues(
+      Function<Integer, C> newCollectionWithCapacity, Serialiser<T> serialiser) {
+    this.newCollectionWithCapacity = newCollectionWithCapacity;
     this.serialiser = serialiser;
   }
 
   @Override
-  public Value serialise(List<T> value) {
+  public Value serialise(C value) {
     return Value.newBuilder()
         .setRepeatedValue(
             RepeatedValue.newBuilder()
@@ -33,11 +36,12 @@ public class ListValues<T> implements Serialiser<List<T>> {
   }
 
   @Override
-  public List<T> deserialise(Value value) throws Exception {
-    final var list = new ArrayList<T>(value.getRepeatedValue().getValuesList().size());
+  public C deserialise(Value value) throws Exception {
+    final var collection =
+        newCollectionWithCapacity.apply(value.getRepeatedValue().getValuesList().size());
     for (Value v : value.getRepeatedValue().getValuesList()) {
-      list.add(serialiser.deserialise(v));
+      collection.add(serialiser.deserialise(v));
     }
-    return list;
+    return collection;
   }
 }

@@ -2,6 +2,10 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 
 import com.google.protobuf.MessageLite;
 import com.markosindustries.distroboy.core.protobuf.ParseFromByteString;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /** Provides singletons and factory methods for default serialisers */
 public interface Serialisers {
@@ -31,8 +35,19 @@ public interface Serialisers {
    * @param <T> The type the lists contain
    * @return A serialiser for Lists of values
    */
-  static <T> ListValues<T> listEntries(Serialiser<T> serialiser) {
-    return new ListValues<>(serialiser);
+  static <T> CollectionValues<T, List<T>> listEntries(Serialiser<T> serialiser) {
+    return new CollectionValues<>(ArrayList::new, serialiser);
+  }
+
+  /**
+   * Serialiser factory for {@link java.util.List}s of values
+   *
+   * @param serialiser The serialiser for the type the lists contain
+   * @param <T> The type the lists contain
+   * @return A serialiser for Lists of values
+   */
+  static <T> CollectionValues<T, Set<T>> setEntries(Serialiser<T> serialiser) {
+    return new CollectionValues<>(HashSet::new, serialiser);
   }
 
   /**
