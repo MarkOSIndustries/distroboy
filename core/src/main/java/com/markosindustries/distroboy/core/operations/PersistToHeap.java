@@ -37,20 +37,22 @@ public class PersistToHeap<I>
   @Override
   public IteratorWithResources<DataReference> apply(IteratorWithResources<I> input)
       throws Exception {
-    final List<I> asList = IteratorTo.list(input);
+    try (input) {
+      final List<I> asList = IteratorTo.list(input);
 
-    final DataReferenceId referenceId = new DataReferenceId();
-    cluster.addDistributableData(
-        referenceId,
-        new DistributableDataReference<>(
-            () -> IteratorWithResources.from(asList), serialiser, true));
+      final DataReferenceId referenceId = new DataReferenceId();
+      cluster.addDistributableData(
+          referenceId,
+          new DistributableDataReference<>(
+              () -> IteratorWithResources.from(asList), serialiser, true));
 
-    return IteratorWithResources.of(
-        DataReference.newBuilder()
-            .setMemberId(cluster.clusterMemberId.asBytes())
-            .setReferenceId(referenceId.asBytes())
-            .setCount(asList.size())
-            .build());
+      return IteratorWithResources.of(
+          DataReference.newBuilder()
+              .setMemberId(cluster.clusterMemberId.asBytes())
+              .setReferenceId(referenceId.asBytes())
+              .setCount(asList.size())
+              .build());
+    }
   }
 
   @Override

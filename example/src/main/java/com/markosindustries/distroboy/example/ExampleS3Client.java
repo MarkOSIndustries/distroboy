@@ -11,7 +11,6 @@ import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Hashing;
 import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
-import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.example.avro.SampleParquetOutputRecord;
 import com.markosindustries.distroboy.example.localstack.TempSdkHttpClientTrailingSlashAppender;
@@ -65,7 +64,7 @@ public interface ExampleS3Client {
                             new SampleParquetOutputRecord.InnerThing(
                                 lineLengthWithLines.getValue().get(0)),
                             lineLengthWithLines.getKey()))
-                .reduce(
+                .reduceToIterables(
                     new WriteToParquet<SampleParquetOutputRecord, Path>(
                         new ParquetAvroFilesWriterStrategy<>(
                             (_ignored) -> {
@@ -75,7 +74,7 @@ public interface ExampleS3Client {
                                       + ".parquet");
                             },
                             SampleParquetOutputRecord.class)))
-                .flatMap(IteratorWithResources::from)
+                .flatten()
                 .map(
                     path -> {
                       s3Client.putObject(

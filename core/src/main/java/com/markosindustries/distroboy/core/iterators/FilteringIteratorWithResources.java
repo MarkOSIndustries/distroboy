@@ -1,15 +1,18 @@
 package com.markosindustries.distroboy.core.iterators;
 
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
- * An {@link IteratorWithResources} which will take elements in the wrapped iterator and filter them
+ * An {@link IteratorWithResources} which will take elements in the wrapped iterator and filter
+ * them. If the wrapped iterator is AutoCloseable (such as {@link IteratorWithResources}) it will be
+ * closed appropriately too.
  *
  * @param <I> The type of elements in {@link IteratorWithResources}
  */
 public class FilteringIteratorWithResources<I> implements IteratorWithResources<I> {
-  private final IteratorWithResources<I> wrapped;
+  private final Iterator<I> wrapped;
   private final Predicate<I> filter;
   private boolean hasNext;
   private I next;
@@ -21,7 +24,7 @@ public class FilteringIteratorWithResources<I> implements IteratorWithResources<
    * @param wrapped The wrapped iterator to take items from
    * @param filter The condition under which items are returned from this iterator
    */
-  public FilteringIteratorWithResources(IteratorWithResources<I> wrapped, Predicate<I> filter) {
+  public FilteringIteratorWithResources(Iterator<I> wrapped, Predicate<I> filter) {
     if (Objects.isNull(wrapped)) {
       throw new IllegalArgumentException("Wrapped iterator cannot be null");
     }
@@ -59,6 +62,8 @@ public class FilteringIteratorWithResources<I> implements IteratorWithResources<
 
   @Override
   public void close() throws Exception {
-    wrapped.close();
+    if (wrapped instanceof AutoCloseable) {
+      ((AutoCloseable) wrapped).close();
+    }
   }
 }

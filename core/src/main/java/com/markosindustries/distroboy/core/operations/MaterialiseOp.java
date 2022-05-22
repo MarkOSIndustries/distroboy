@@ -14,6 +14,9 @@ import java.util.List;
 public class MaterialiseOp<I> implements ListOp<I, I> {
   @Override
   public IteratorWithResources<I> apply(IteratorWithResources<I> input) throws Exception {
-    return IteratorWithResources.from(IteratorTo.list(input).iterator());
+    try (input) {
+      final var list = IteratorTo.list(input);
+      return IteratorWithResources.from(list.iterator());
+    }
   }
 }

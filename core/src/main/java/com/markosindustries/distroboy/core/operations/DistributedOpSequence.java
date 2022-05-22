@@ -8,6 +8,7 @@ import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.schemas.DataReference;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -141,13 +142,32 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      *
      * @param mapOp the mapping operation
      * @param <O2> The new output type of the sequence
-     * @param <O2I> The IteratorWithResources type of the new output type
+     * @param <O2Iterator> The Iterator type of the new output type
      * @return A new {@link DistributedOpSequence.IteratorBuilder} with this operation applied at
      *     the end
      */
-    public <O2, O2I extends IteratorWithResources<O2>>
-        IteratorBuilder<I, O2, O2I, List<O2I>> mapToIterators(MapOp<O, O2I> mapOp) {
+    public <O2, O2Iterator extends Iterator<O2>>
+        IteratorBuilder<I, O2, O2Iterator, List<O2Iterator>> mapToIterators(
+            MapOp<O, O2Iterator> mapOp) {
       return new IteratorBuilder<>(dataSource, operand.then(mapOp));
+    }
+
+    /**
+     * Transforms each item via the given {@link MapOp}, where the output type is an {@link
+     * Iterable}
+     *
+     * @param mapOp the mapping operation
+     * @param <O2> The new output type of the sequence
+     * @param <O2Iterable> The Iterable type of the new output type
+     * @return A new {@link DistributedOpSequence.IteratorBuilder} with this operation applied at
+     *     the end
+     */
+    public <O2, O2Iterable extends Iterable<O2>>
+        IteratorBuilder<I, O2, Iterator<O2>, List<Iterator<O2>>> mapToIterables(
+            MapOp<O, O2Iterable> mapOp) {
+      return new IteratorBuilder<>(
+          dataSource,
+          operand.then(mapOp).then((MapOp<O2Iterable, Iterator<O2>>) IteratorWithResources::from));
     }
 
     /**
@@ -163,6 +183,40 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
     }
 
     /**
+     * Transforms each item via the given {@link FlatMapOp}, then flattens the results into a single
+     * Iterator, where the output type is an {@link Iterator}
+     *
+     * @param flatMapOp the flat-mapping operation
+     * @param <O2> The new output type of the sequence
+     * @param <O2Iterator> The Iterator type of the new output type
+     * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
+     */
+    public <O2, O2Iterator extends Iterator<O2>>
+        IteratorBuilder<I, O2, O2Iterator, List<O2Iterator>> flatMapToIterators(
+            FlatMapOp<O, O2Iterator> flatMapOp) {
+      return new IteratorBuilder<>(dataSource, operand.then(flatMapOp));
+    }
+
+    /**
+     * Transforms each item via the given {@link FlatMapOp}, then flattens the results into a single
+     * Iterator, where the output type is an {@link Iterable}
+     *
+     * @param flatMapOp the flat-mapping operation
+     * @param <O2> The new output type of the sequence
+     * @param <O2Iterable> The Iterable type of the new output type
+     * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
+     */
+    public <O2, O2Iterable extends Iterable<O2>>
+        IteratorBuilder<I, O2, Iterator<O2>, List<Iterator<O2>>> flatMapToIterables(
+            FlatMapOp<O, O2Iterable> flatMapOp) {
+      return new IteratorBuilder<>(
+          dataSource,
+          operand
+              .then(flatMapOp)
+              .then((MapOp<O2Iterable, Iterator<O2>>) IteratorWithResources::from));
+    }
+
+    /**
      * Aggregates each item via the given {@link ReduceOp}
      *
      * @param reduceOp the reducing operation
@@ -171,6 +225,40 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      */
     public <O2> Builder<I, O2, O2> reduce(ReduceOp<O, O2> reduceOp) {
       return new Builder<>(dataSource, operand.then(reduceOp));
+    }
+
+    /**
+     * Aggregates each item via the given {@link ReduceOp}, where the output type is an {@link
+     * Iterator}
+     *
+     * @param reduceOp the reducing operation
+     * @param <O2> The new output type of the sequence
+     * @param <O2Iterator> The Iterator type of the new output type
+     * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
+     */
+    public <O2, O2Iterator extends Iterator<O2>>
+        IteratorBuilder<I, O2, O2Iterator, O2Iterator> reduceToIterators(
+            ReduceOp<O, O2Iterator> reduceOp) {
+      return new IteratorBuilder<>(dataSource, operand.then(reduceOp));
+    }
+
+    /**
+     * Aggregates each item via the given {@link ReduceOp}, where the output type is an {@link
+     * Iterable}
+     *
+     * @param reduceOp the reducing operation
+     * @param <O2> The new output type of the sequence
+     * @param <O2Iterable> The Iterable type of the new output type
+     * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
+     */
+    public <O2, O2Iterable extends Iterable<O2>>
+        IteratorBuilder<I, O2, Iterator<O2>, List<Iterator<O2>>> reduceToIterables(
+            ReduceOp<O, O2Iterable> reduceOp) {
+      return new IteratorBuilder<>(
+          dataSource,
+          operand
+              .then(reduceOp)
+              .then((MapOp<O2Iterable, Iterator<O2>>) IteratorWithResources::from));
     }
 
     /**
@@ -300,15 +388,14 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
 
   /**
    * A {@link DistributedOpSequence.Builder} with some extra convenience methods available for
-   * dealing with {@link IteratorWithResources} items.
+   * dealing with {@link Iterator} items.
    *
    * @param <I> The type of data in the data source
    * @param <O> The type of data the resulting iterators contain
    * @param <OI> The type of the resulting iterators
    * @param <C> The type of data which would be collected by the current op sequence
    */
-  public static class IteratorBuilder<I, O, OI extends IteratorWithResources<O>, C>
-      extends Builder<I, OI, C> {
+  public static class IteratorBuilder<I, O, OI extends Iterator<O>, C> extends Builder<I, OI, C> {
     IteratorBuilder(DataSource<I> dataSource, Operand<OI, C> operand) {
       super(dataSource, operand);
     }
@@ -336,6 +423,15 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      */
     public IteratorBuilder<I, O, OI, List<OI>> materialise() {
       return new IteratorBuilder<>(dataSource, operand.then(new MaterialiseOp<>()));
+    }
+
+    /**
+     * Shortcut for {@code flatMap(x -> x)}
+     *
+     * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
+     */
+    public Builder<I, O, List<O>> flatten() {
+      return flatMap(x -> x);
     }
   }
 

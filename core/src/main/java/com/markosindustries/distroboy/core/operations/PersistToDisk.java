@@ -46,7 +46,8 @@ public class PersistToDisk<I>
     file.deleteOnExit();
 
     long valueCount = 0;
-    try (final var fileOutputStream = new FileOutputStream(file, false)) {
+    try (final var fileOutputStream = new FileOutputStream(file, false);
+        input) {
       CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(fileOutputStream, 4096);
 
       while (input.hasNext()) {

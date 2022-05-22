@@ -3,19 +3,21 @@ package com.markosindustries.distroboy.core.iterators;
 import static java.util.Collections.unmodifiableList;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * An {@link IteratorWithResources} which will take elements in the wrapped iterator and apply a map
- * operation to them
+ * operation to them. If the wrapped iterator is AutoCloseable (such as {@link
+ * IteratorWithResources}) it will be closed appropriately too.
  *
- * @param <I> The type of elements in the input {@link IteratorWithResources}
+ * @param <I> The type of elements in the input {@link Iterator}
  * @param <O> The type of elements in the output {@link IteratorWithResources}
  */
 public class MappingIteratorWithResources<I, O> implements IteratorWithResources<O> {
-  private final IteratorWithResources<I> wrapped;
+  private final Iterator<I> wrapped;
   private final Function<I, O> mapper;
   private final List<AutoCloseable> resources;
 
@@ -26,7 +28,7 @@ public class MappingIteratorWithResources<I, O> implements IteratorWithResources
    * @param wrapped The wrapped iterator to take items from
    * @param mapper The function to map wrapped iterator items to the output type
    */
-  public MappingIteratorWithResources(IteratorWithResources<I> wrapped, Function<I, O> mapper) {
+  public MappingIteratorWithResources(Iterator<I> wrapped, Function<I, O> mapper) {
     this(wrapped, mapper, Collections.emptyList());
   }
 
@@ -40,9 +42,7 @@ public class MappingIteratorWithResources<I, O> implements IteratorWithResources
    *     IteratorWithResources} is closed
    */
   public MappingIteratorWithResources(
-      IteratorWithResources<I> wrapped,
-      Function<I, O> mapper,
-      List<? extends AutoCloseable> resources) {
+      Iterator<I> wrapped, Function<I, O> mapper, List<? extends AutoCloseable> resources) {
     if (Objects.isNull(wrapped)) {
       throw new IllegalArgumentException("Wrapped iterator cannot be null");
     }
@@ -69,6 +69,8 @@ public class MappingIteratorWithResources<I, O> implements IteratorWithResources
     for (AutoCloseable resource : resources) {
       resource.close();
     }
-    wrapped.close();
+    if (wrapped instanceof AutoCloseable) {
+      ((AutoCloseable) wrapped).close();
+    }
   }
 }

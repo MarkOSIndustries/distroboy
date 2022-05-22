@@ -253,8 +253,7 @@ public final class Cluster implements AutoCloseable {
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
   public <I, H>
-      DistributedOpSequence.IteratorBuilder<
-              Integer, I, IteratorWithResources<I>, List<IteratorWithResources<I>>>
+      DistributedOpSequence.IteratorBuilder<Integer, I, Iterator<I>, List<Iterator<I>>>
           redistributeByHash(
               DataReferenceList<I> dataReferences,
               Function<I, H> classifier,
@@ -278,8 +277,9 @@ public final class Cluster implements AutoCloseable {
     return DistributedOpSequence.readFrom(hashesSource) // start with a hash value per node
         .mapToIterators(
             hash ->
-                IteratorWithResources.from(
-                    retrieveByHash(dataReferences.list(), hash, partitions, serialiser)))
+                (Iterator<I>)
+                    IteratorWithResources.from(
+                        retrieveByHash(dataReferences.list(), hash, partitions, serialiser)))
         .materialise(); // important that we materialise, otherwise not all GRPC retrieveByHash
     // calls will be made
   }

@@ -11,6 +11,11 @@ import java.util.List;
  * @param <I> The type of items in the iterator
  */
 public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
+  AutoCloseable NOOP_AUTOCLOSEABLE =
+      () -> {
+        /* NOOP on close() */
+      };
+
   /**
    * Produce an {@link IteratorWithResources} which contains the provided elements
    *
@@ -45,11 +50,13 @@ public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
    * @return An {@link IteratorWithResources}
    */
   static <I> IteratorWithResources<I> from(Iterator<I> iterator) {
-    return from(
-        iterator,
-        () -> {
-          /* NOOP on close() */
-        });
+    if (iterator instanceof IteratorWithResources) {
+      return (IteratorWithResources<I>) iterator;
+    }
+    if (iterator instanceof AutoCloseable) {
+      return from(iterator, (AutoCloseable) iterator);
+    }
+    return from(iterator, NOOP_AUTOCLOSEABLE);
   }
 
   /**
@@ -61,11 +68,10 @@ public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
    * @return An {@link IteratorWithResources}
    */
   static <I> IteratorWithResources<I> from(Iterable<I> iterable) {
-    return from(
-        iterable.iterator(),
-        () -> {
-          /* NOOP on close() */
-        });
+    if (iterable instanceof AutoCloseable) {
+      return from(iterable.iterator(), (AutoCloseable) iterable);
+    }
+    return from(iterable.iterator(), NOOP_AUTOCLOSEABLE);
   }
 
   /**
