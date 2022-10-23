@@ -71,7 +71,7 @@ service ClusterMember {
   rpc distribute(DataReferences) returns (google.protobuf.Empty);
   rpc retrieveRange(DataReferenceRange) returns (stream Value);
   rpc retrieveByHash(DataReferenceHashSpec) returns (stream Value);
-  rpc disband(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc synchronise(google.protobuf.Empty) returns (Value);
 }
 
 message ClusterMemberIdentity {

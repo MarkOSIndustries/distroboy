@@ -6,6 +6,8 @@ import static java.util.stream.Collectors.toUnmodifiableMap;
 
 import com.google.protobuf.Empty;
 import com.markosindustries.distroboy.core.Cluster;
+import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
+import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DataSource;
 import com.markosindustries.distroboy.schemas.ClusterMemberGrpc;
@@ -26,15 +28,17 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +54,8 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   private final ConcurrentMap<DataReferenceId, BlockingQueue<HashedDataReference<?>>>
       dataReferenceHashers;
   private final Object classifiersLock = new Object();
-  private final AtomicBoolean disbanded = new AtomicBoolean(false);
-  private final Object disbandedLock = new Object();
+  private final BlockingQueue<SynchronisationPoint> synchronisationPoints;
+  private final Object synchronisationPointsLock = new Object();
   private final AtomicReference<DataReferences> distributedReferences = new AtomicReference<>(null);
   private final Object distributedReferencesLock = new Object();
   private final Server memberServer;
@@ -71,6 +75,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     this.cluster = cluster;
     this.jobs = new LinkedBlockingQueue<>();
     this.dataReferenceHashers = new ConcurrentHashMap<>();
+    this.synchronisationPoints = new LinkedBlockingQueue<>();
     this.distributableData = new DistributableData();
     this.memberServer = ServerBuilder.forPort(cluster.memberPort).addService(this).build().start();
 
@@ -284,8 +289,9 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
     final var classifiersForDataReference =
         dataReferenceHashers.computeIfAbsent(referenceId, dr -> new LinkedBlockingQueue<>());
-    HashedDataReference<?> hashedDataReference = classifiersForDataReference.peek();
+    HashedDataReference<?> hashedDataReference;
     synchronized (classifiersLock) {
+      hashedDataReference = classifiersForDataReference.peek();
       while (hashedDataReference == null) {
         try {
           classifiersLock.wait();
@@ -325,15 +331,93 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   }
 
   @Override
-  public void disband(Empty request, StreamObserver<Empty> responseObserver) {
-    log.debug("Received disband");
-    synchronized (disbandedLock) {
-      disbanded.set(true);
-      disbandedLock.notify();
+  public void synchronise(final Empty request, final StreamObserver<Value> responseObserver) {
+    // Only the leader should materialise the value and synchronise it
+    if (!isLeader) {
+      responseObserver.onError(Status.NOT_FOUND.asRuntimeException());
+      responseObserver.onCompleted();
+      return;
     }
-    log.debug("Disbanded");
-    responseObserver.onNext(Empty.newBuilder().build());
+
+    SynchronisationPoint synchronisationPoint;
+    synchronized (synchronisationPointsLock) {
+      synchronisationPoint = synchronisationPoints.peek();
+      while (synchronisationPoint == null) {
+        try {
+          synchronisationPointsLock.wait();
+        } catch (InterruptedException e) {
+          // Just try again
+        }
+        synchronisationPoint = synchronisationPoints.peek();
+      }
+    }
+
+    synchronisationPoint.countDownLatch.countDown();
+
+    while (true) {
+      try {
+        synchronisationPoint.countDownLatch.await();
+        break;
+      } catch (InterruptedException e) {
+        // just try again
+      }
+    }
+
+    // This one is now done, pop it off the queue
+    synchronisationPoints.poll();
+
+    responseObserver.onNext(synchronisationPoint.getSynchronisedValue());
     responseObserver.onCompleted();
+  }
+
+  public <T> T synchroniseValueFromLeader(
+      Supplier<T> valueSupplier, Serialiser<T> valueSerialiser, int expectedSynchroniseCount) {
+    if (isLeader()) {
+      synchronized (synchronisationPointsLock) {
+        synchronisationPoints.add(
+            new SynchronisationPoint(valueSupplier, valueSerialiser, expectedSynchroniseCount));
+        synchronisationPointsLock.notify();
+      }
+    }
+
+    for (final ConnectionToClusterMember member : members) {
+      final Optional<Value> synchronisedValue = member.synchronise();
+      if (synchronisedValue.isPresent()) {
+        try {
+          return valueSerialiser.deserialise(synchronisedValue.get());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    // The leader should have responded, something is very broken
+    throw new RuntimeException("No member responded with a synchronised value");
+  }
+
+  static class SynchronisationPoint {
+    volatile Value synchronisedValue = null;
+    final Supplier<Value> supplyValue;
+    final CountDownLatch countDownLatch;
+
+    public <T> SynchronisationPoint(
+        final Supplier<T> valueSupplier,
+        final Serialiser<T> valueSerialiser,
+        final int expectedSynchroniseCount) {
+      supplyValue = () -> valueSerialiser.serialise(valueSupplier.get());
+      countDownLatch = new CountDownLatch(expectedSynchroniseCount);
+    }
+
+    public Value getSynchronisedValue() {
+      if (synchronisedValue == null) {
+        synchronized (this) {
+          if (synchronisedValue == null) {
+            synchronisedValue = supplyValue.get();
+          }
+        }
+      }
+      return synchronisedValue;
+    }
   }
 
   static class HashedDataReference<T> {
@@ -382,8 +466,8 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
 
   /**
    * Add a job to be executed by the cluster. Jobs are always executed in the order they are added.
-   * This ensures that all cluster members are working on the same job at the same time, since they
-   * all have the same code.
+   * This ensures that all cluster members are working on the same jobs in the same order, since
+   * they all have the same code.
    *
    * @param job The next job to be executed
    */
@@ -422,26 +506,20 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   @Override
   public void close() throws Exception {
     log.debug("Closing");
-    if (isLeader) {
-      log.debug("Closing - sending disbands");
-      for (ConnectionToClusterMember member : members) {
-        log.debug("Closing - sending disband to {}", member);
-        member.disband();
-      }
-    }
-    log.debug("Closing - awaiting disband");
-    synchronized (disbandedLock) {
-      while (!disbanded.get()) {
-        disbandedLock.wait();
-      }
-    }
-    log.debug("Closing - disbanded");
+
+    log.debug("Closing - synchronising");
+    synchroniseValueFromLeader(() -> null, Serialisers.voidValues, members.length);
+    log.debug("Closing - synchronised");
+
     try {
       memberServer.shutdown();
-      memberServer.awaitTermination();
       for (ConnectionToClusterMember member : members) {
-        log.debug("Closing - shutting down connection to {}", member);
+        log.debug("Closing - shutting down {}", member);
         member.close();
+        log.debug("Closing - successfully shut down {}", member);
+      }
+      while (!memberServer.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+        log.debug("Awaiting shutdown of member server");
       }
     } catch (Throwable t) {
       log.error(

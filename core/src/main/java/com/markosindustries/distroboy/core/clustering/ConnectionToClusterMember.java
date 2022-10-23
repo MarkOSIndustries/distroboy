@@ -12,8 +12,11 @@ import com.markosindustries.distroboy.schemas.HostAndPort;
 import com.markosindustries.distroboy.schemas.Value;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,8 +64,15 @@ class ConnectionToClusterMember implements AutoCloseable {
     return hostAndPort;
   }
 
-  public void disband() {
-    member.disband(Empty.newBuilder().build());
+  public Optional<Value> synchronise() {
+    try {
+      return Optional.of(member.synchronise(Empty.newBuilder().build()));
+    } catch (StatusRuntimeException sre) {
+      if (sre.getStatus() == Status.NOT_FOUND) {
+        return Optional.empty();
+      }
+      throw sre;
+    }
   }
 
   @Override

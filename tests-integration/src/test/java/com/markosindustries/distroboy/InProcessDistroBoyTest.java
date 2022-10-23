@@ -9,6 +9,7 @@ import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -160,6 +161,34 @@ public class InProcessDistroBoyTest {
                             .collect(Collectors.toUnmodifiableSet());
 
                     Assertions.assertEquals(expectedValues.size() / 2, uniqueMemberIds.size());
+                  });
+        });
+  }
+
+  @Test
+  public void canSynchroniseMembers() throws Exception {
+    DistroBoySingleProcess.run(
+        "InProcessDistroBoyTest.canSynchroniseMembers",
+        2,
+        cluster -> {
+          AtomicReference<Long> timeOnLeaderRef = new AtomicReference<>();
+          final var timeOnLeader =
+              cluster.waitAndDistributeToAllMembers(
+                  () -> {
+                    timeOnLeaderRef.set(System.currentTimeMillis());
+                    return timeOnLeaderRef.get();
+                  },
+                  Serialisers.longValues);
+
+          final var simpleJob =
+              DistributedOpSequence.readFrom(new StaticDataSource<>(List.of(timeOnLeader)))
+                  .collect(Serialisers.longValues);
+          cluster
+              .execute(simpleJob)
+              .onClusterLeader(
+                  result -> {
+                    Assertions.assertEquals(1, result.size());
+                    Assertions.assertEquals(timeOnLeaderRef.get(), result.get(0));
                   });
         });
   }

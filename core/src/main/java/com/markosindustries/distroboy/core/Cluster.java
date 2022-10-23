@@ -9,6 +9,7 @@ import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.DataReferenceId;
 import com.markosindustries.distroboy.core.clustering.DistributableDataReference;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
+import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.FlatMappingIterator;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResources;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -158,6 +160,41 @@ public final class Cluster implements AutoCloseable {
   @Override
   public void close() throws Exception {
     clusterMember.close();
+  }
+
+  /**
+   * Is this cluster member the leader? Only one member will be the leader for the duration of a
+   * cluster.
+   *
+   * @return true if this member is the leader, otherwise false
+   */
+  public boolean isLeader() {
+    return clusterMember.isLeader();
+  }
+
+  /**
+   * Wait for all cluster members to reach this line of code before continuing. By default, members
+   * will race through jobs as fast as possible, only waiting when they need data from another
+   * member. This can sometimes cause issues, so use this method to manually synchronise all cluster
+   * members.
+   */
+  public void waitForAllMembers() {
+    clusterMember.synchroniseValueFromLeader(
+        () -> null, Serialisers.voidValues, expectedClusterMembers);
+  }
+
+  /**
+   * Wait for all cluster members to reach this line of code, then run the given {@link Supplier} on
+   * the cluster leader and distribute the result to all members. Useful for making distributed
+   * decisions such as "should we continue this while loop?"
+   *
+   * @return The result of running the {@link Supplier} on the cluster leader, when all members have
+   *     reached this line of code.
+   */
+  public <T> T waitAndDistributeToAllMembers(
+      Supplier<T> supplyValueOnLeader, Serialiser<T> serialiser) {
+    return clusterMember.synchroniseValueFromLeader(
+        supplyValueOnLeader, serialiser, expectedClusterMembers);
   }
 
   /**
