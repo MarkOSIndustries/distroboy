@@ -376,7 +376,10 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
       synchronized (synchronisationPointsLock) {
         synchronisationPoints.add(
             new SynchronisationPoint(valueSupplier, valueSerialiser, expectedSynchroniseCount));
-        synchronisationPointsLock.notify();
+        // Notify as many threads as could possibly be waiting
+        for (int i = 0; i < members.length; i++) {
+          synchronisationPointsLock.notify();
+        }
       }
     }
 
@@ -507,7 +510,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
   public void close() throws Exception {
     log.debug("Closing");
 
-    log.debug("Closing - synchronising");
+    log.debug("Closing - synchronising {}", members.length);
     synchroniseValueFromLeader(() -> null, Serialisers.voidValues, members.length);
     log.debug("Closing - synchronised");
 
