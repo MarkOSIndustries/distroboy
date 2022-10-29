@@ -1,26 +1,29 @@
 package com.markosindustries.distroboy;
 
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 
 import com.markosindustries.distroboy.core.Hashing;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class InProcessDistroBoyTest {
   @Test
   public void canRunAJob() throws Exception {
-    final var expectedValues = List.of(1, 2, 3, 4);
+    final var expectedValues = List.of(1, 2, 3, 4, 5);
     DistroBoySingleProcess.run(
         "InProcessDistroBoyTest.canRunAJob",
-        2,
+        3,
         cluster -> {
           final var simpleJob =
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues)).count();
@@ -35,12 +38,12 @@ public class InProcessDistroBoyTest {
 
   @Test
   public void canUseForEach() throws Exception {
-    final var expectedValues = List.of(1, 2, 3, 4);
-    final var actualValues = new ConcurrentSkipListSet<>();
+    final var expectedValues = List.of(1, 2, 3, 4, 5);
+    final var actualValues = Collections.synchronizedList(new ArrayList<Integer>());
 
     DistroBoySingleProcess.run(
         "InProcessDistroBoyTest.canUseForEach",
-        2,
+        3,
         cluster -> {
           final var simpleJob =
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
@@ -49,20 +52,22 @@ public class InProcessDistroBoyTest {
               .execute(simpleJob)
               .onClusterLeader(
                   ignored -> {
-                    Assertions.assertIterableEquals(expectedValues, actualValues);
+                    Assertions.assertIterableEquals(
+                        expectedValues,
+                        actualValues.stream().sorted().collect(Collectors.toList()));
                   });
         });
   }
 
   @Test
   public void canUseRedistributeAndGroupBy() throws Exception {
-    final var modulo = 2;
-    final var expectedValues = List.of(1, 2, 3, 4);
+    final var modulo = 6;
+    final var expectedValues = IntStream.range(1, 21).boxed().collect(toList());
     final var expectedMap = expectedValues.stream().collect(groupingBy(x -> x % modulo));
 
     DistroBoySingleProcess.run(
         "InProcessDistroBoyTest.canUseRedistributeAndGroupBy",
-        2,
+        3,
         cluster -> {
           final var groupedDataJob =
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
@@ -95,11 +100,11 @@ public class InProcessDistroBoyTest {
 
   @Test
   public void canUseRedistributeEvenlyFromHeap() throws Exception {
-    final var expectedValues = List.of(1, 2, 3, 4);
+    final var expectedValues = List.of(1, 2, 3, 4, 5);
 
     DistroBoySingleProcess.run(
         "InProcessDistroBoyTest.canUseRedistributeEvenlyFromHeap",
-        2,
+        3,
         cluster -> {
           final var simpleJob =
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
@@ -124,18 +129,18 @@ public class InProcessDistroBoyTest {
                             .map(ClusterMemberId::fromBytes)
                             .collect(Collectors.toUnmodifiableSet());
 
-                    Assertions.assertEquals(expectedValues.size() / 2, uniqueMemberIds.size());
+                    Assertions.assertEquals(3, uniqueMemberIds.size());
                   });
         });
   }
 
   @Test
   public void canUseRedistributeEvenlyFromDisk() throws Exception {
-    final var expectedValues = List.of(1, 2, 3, 4);
+    final var expectedValues = List.of(1, 2, 3, 4, 5);
 
     DistroBoySingleProcess.run(
         "InProcessDistroBoyTest.canUseRedistributeEvenlyFromDisk",
-        2,
+        3,
         cluster -> {
           final var simpleJob =
               DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
@@ -160,7 +165,7 @@ public class InProcessDistroBoyTest {
                             .map(ClusterMemberId::fromBytes)
                             .collect(Collectors.toUnmodifiableSet());
 
-                    Assertions.assertEquals(expectedValues.size() / 2, uniqueMemberIds.size());
+                    Assertions.assertEquals(3, uniqueMemberIds.size());
                   });
         });
   }
@@ -169,7 +174,7 @@ public class InProcessDistroBoyTest {
   public void canSynchroniseMembers() throws Exception {
     DistroBoySingleProcess.run(
         "InProcessDistroBoyTest.canSynchroniseMembers",
-        2,
+        3,
         cluster -> {
           AtomicReference<Long> timeOnLeaderRef = new AtomicReference<>();
           final var timeOnLeader =
