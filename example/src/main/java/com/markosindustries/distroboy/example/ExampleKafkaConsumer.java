@@ -51,13 +51,12 @@ public interface ExampleKafkaConsumer {
                 IsolationLevel.READ_COMMITTED.toString().toLowerCase(Locale.ROOT))
             .build();
 
-    final var kafkaConsumer = new KafkaConsumer<byte[], byte[]>(kafkaConfig);
-
     cluster
         .execute(
             DistributedOpSequence.readFrom(
                     new KafkaTopicPartitionsSource(
-                        kafkaConsumer, List.of("distroboy.example.topic")))
+                        () -> new KafkaConsumer<byte[], byte[]>(kafkaConfig),
+                        List.of("distroboy.example.topic")))
                 .flatMap(
                     // TODO: This is an example only. In a real job, you'd likely want to use
                     //  timestamp-based offsets in the past if possible, so that you can ensure
@@ -65,7 +64,9 @@ public interface ExampleKafkaConsumer {
                     //  only really safe when the topic isn't being cleaned or added to when the
                     //  distributed operation is running
                     new ReadKafkaTopicPartitionRange<>(
-                        kafkaConsumer, new EarliestKafkaOffsetSpec(), new LatestKafkaOffsetSpec()))
+                        () -> new KafkaConsumer<byte[], byte[]>(kafkaConfig),
+                        new EarliestKafkaOffsetSpec(),
+                        new LatestKafkaOffsetSpec()))
                 .count())
         .onClusterLeader(
             events -> {

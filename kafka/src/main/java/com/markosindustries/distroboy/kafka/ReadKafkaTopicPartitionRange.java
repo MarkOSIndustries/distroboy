@@ -3,6 +3,7 @@ package com.markosindustries.distroboy.kafka;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.FlatMapOp;
 import java.util.List;
+import java.util.function.Supplier;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -23,16 +24,16 @@ public class ReadKafkaTopicPartitionRange<K, V>
   private final KafkaOffsetSpec endOffsetExclusiveSpec;
 
   /**
-   * @param kafkaConsumer A {@link org.apache.kafka.clients.consumer.KafkaConsumer} to communicate
-   *     with Kafka via
+   * @param kafkaConsumerSupplier A Supplier of {@link
+   *     org.apache.kafka.clients.consumer.KafkaConsumer} to communicate with Kafka via
    * @param startOffsetInclusiveSpec The starting offset spec (inclusive)
    * @param endOffsetExclusiveSpec The end offset spec (exclusive)
    */
   public ReadKafkaTopicPartitionRange(
-      Consumer<K, V> kafkaConsumer,
+      Supplier<Consumer<K, V>> kafkaConsumerSupplier,
       KafkaOffsetSpec startOffsetInclusiveSpec,
       KafkaOffsetSpec endOffsetExclusiveSpec) {
-    this.kafkaConsumer = kafkaConsumer;
+    this.kafkaConsumer = kafkaConsumerSupplier.get();
     this.startOffsetInclusiveSpec = startOffsetInclusiveSpec;
     this.endOffsetExclusiveSpec = endOffsetExclusiveSpec;
   }

@@ -5,6 +5,7 @@ import com.markosindustries.distroboy.core.operations.DataSource;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -18,11 +19,14 @@ public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartitio
   private final List<TopicPartition> topicPartitions;
 
   /**
-   * @param kafkaConsumer A {@link org.apache.kafka.clients.consumer.KafkaConsumer} to communicate
-   *     with Kafka via
+   * @param kafkaConsumerSupplier A Supplier of {@link
+   *     org.apache.kafka.clients.consumer.KafkaConsumer} to communicate with Kafka via
    * @param topics The set of topics to retrieve {@link TopicPartition}s for
    */
-  public KafkaTopicPartitionsSource(Consumer<?, ?> kafkaConsumer, Collection<String> topics) {
+  public KafkaTopicPartitionsSource(
+      Supplier<Consumer<?, ?>> kafkaConsumerSupplier, Collection<String> topics) {
+    final Consumer<?, ?> kafkaConsumer = kafkaConsumerSupplier.get();
+
     this.topicPartitions =
         topics.stream()
             .flatMap(
