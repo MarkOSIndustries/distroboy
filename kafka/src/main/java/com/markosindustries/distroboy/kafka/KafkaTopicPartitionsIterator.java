@@ -1,5 +1,7 @@
 package com.markosindustries.distroboy.kafka;
 
+import com.google.common.collect.ImmutableMap;
+import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashSet;
@@ -9,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 
 /**
@@ -21,7 +24,8 @@ import org.apache.kafka.common.TopicPartition;
  * @param <V> The type of values the {@link org.apache.kafka.clients.consumer.KafkaConsumer} will
  *     deserialise
  */
-public class KafkaTopicPartitionsIterator<K, V> implements Iterator<ConsumerRecord<K, V>> {
+public class KafkaTopicPartitionsIterator<K, V>
+    implements IteratorWithResources<ConsumerRecord<K, V>> {
   private final Consumer<K, V> kafkaConsumer;
   private final Set<TopicPartition> partitions;
   private final Map<TopicPartition, Long> startOffsets;
@@ -29,18 +33,20 @@ public class KafkaTopicPartitionsIterator<K, V> implements Iterator<ConsumerReco
   private final LinkedList<ConsumerRecord<K, V>> records = new LinkedList<>();
 
   /**
-   * @param kafkaConsumer A {@link org.apache.kafka.clients.consumer.KafkaConsumer} to communicate
-   *     with Kafka via
+   * @param kafkaConfiguration An ImmutableMap of <a
+   *     href="http://kafka.apache.org/documentation.html#consumerconfigs" >Configuration</a> needed
+   *     to instantiate a KafkaConsumer {@link org.apache.kafka.clients.consumer.KafkaConsumer} to
+   *     communicate with Kafka via
    * @param topicPartitions The set of {@link TopicPartition}s to iterate records from
    * @param startOffsetsInclusiveSpec The starting offset spec (inclusive)
    * @param endOffsetsExclusiveSpec The end offset spec (exclusive)
    */
   public KafkaTopicPartitionsIterator(
-      Consumer<K, V> kafkaConsumer,
+      ImmutableMap<String, Object> kafkaConfiguration,
       Collection<TopicPartition> topicPartitions,
       KafkaOffsetSpec startOffsetsInclusiveSpec,
       KafkaOffsetSpec endOffsetsExclusiveSpec) {
-    this.kafkaConsumer = kafkaConsumer;
+    this.kafkaConsumer = new KafkaConsumer<>(kafkaConfiguration);
     this.partitions = new HashSet<>(topicPartitions);
     this.startOffsets = startOffsetsInclusiveSpec.getOffsets(kafkaConsumer, partitions);
     this.endOffsets = endOffsetsExclusiveSpec.getOffsets(kafkaConsumer, partitions);
@@ -93,5 +99,10 @@ public class KafkaTopicPartitionsIterator<K, V> implements Iterator<ConsumerReco
   public ConsumerRecord<K, V> next() {
     ensureQueueDoesntRunEmpty();
     return records.pop();
+  }
+
+  @Override
+  public void close() throws Exception {
+    this.kafkaConsumer.close();
   }
 }
