@@ -11,6 +11,7 @@ import java.util.List;
  * @param <I> The type of items in the iterator
  */
 public interface IteratorWithResources<I> extends Iterator<I>, AutoCloseable {
+  /** An AutoCloseable which does nothing */
   AutoCloseable NOOP_AUTOCLOSEABLE =
       () -> {
         /* NOOP on close() */

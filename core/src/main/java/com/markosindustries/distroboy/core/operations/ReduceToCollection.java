@@ -14,6 +14,10 @@ import java.util.function.Supplier;
 public class ReduceToCollection<I, C extends Collection<I>> implements ReduceOp<I, C> {
   private final Supplier<C> newCollection;
 
+  /**
+   * @see ReduceToCollection
+   * @param newCollection The constructor to create an empty collection
+   */
   public ReduceToCollection(Supplier<C> newCollection) {
     this.newCollection = newCollection;
   }
