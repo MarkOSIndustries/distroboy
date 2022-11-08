@@ -1,5 +1,6 @@
 package com.markosindustries.distroboy.kafka;
 
+import com.google.common.collect.ImmutableMap;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DataSource;
 import java.util.Collection;
@@ -7,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 
@@ -18,21 +20,27 @@ public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartitio
   private final List<TopicPartition> topicPartitions;
 
   /**
-   * @param kafkaConsumer A {@link org.apache.kafka.clients.consumer.KafkaConsumer} to communicate
-   *     with Kafka via
+   * @param kafkaConfiguration An ImmutableMap of <a
+   *     href="http://kafka.apache.org/documentation.html#consumerconfigs">Configuration</a> needed
+   *     * to instantiate a KafkaConsumer {@link org.apache.kafka.clients.consumer.KafkaConsumer} to
+   *     * communicate with Kafka via
    * @param topics The set of topics to retrieve {@link TopicPartition}s for
    */
-  public KafkaTopicPartitionsSource(Consumer<?, ?> kafkaConsumer, Collection<String> topics) {
-    this.topicPartitions =
-        topics.stream()
-            .flatMap(
-                topic ->
-                    kafkaConsumer.partitionsFor(topic).stream()
-                        .sorted(Comparator.comparingInt(PartitionInfo::partition)))
-            .map(
-                partitionInfo ->
-                    new TopicPartition(partitionInfo.topic(), partitionInfo.partition()))
-            .collect(Collectors.toUnmodifiableList());
+  public KafkaTopicPartitionsSource(
+      ImmutableMap<String, Object> kafkaConfiguration, Collection<String> topics) {
+    try (Consumer<?, ?> kafkaConsumer = new KafkaConsumer<>(kafkaConfiguration)) {
+
+      this.topicPartitions =
+          topics.stream()
+              .flatMap(
+                  topic ->
+                      kafkaConsumer.partitionsFor(topic).stream()
+                          .sorted(Comparator.comparingInt(PartitionInfo::partition)))
+              .map(
+                  partitionInfo ->
+                      new TopicPartition(partitionInfo.topic(), partitionInfo.partition()))
+              .collect(Collectors.toUnmodifiableList());
+    }
   }
 
   @Override
