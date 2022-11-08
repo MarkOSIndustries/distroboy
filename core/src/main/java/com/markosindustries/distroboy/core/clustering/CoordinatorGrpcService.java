@@ -48,7 +48,18 @@ public class CoordinatorGrpcService extends CoordinatorGrpc.CoordinatorImplBase 
     }
 
     public void add(
-        HostAndPort member, ServerCallStreamObserver<ClusterMembers> serverCallStreamObserver) {
+        HostAndPort member, ServerCallStreamObserver<ClusterMembers> serverCallStreamObserver)
+        throws StatusException {
+      if (members.containsKey(member)) {
+        log.warn(
+            "Lobby {} - Already had a member for {}:{}, instructing both to retry",
+            clusterName,
+            member.getHost(),
+            member.getPort());
+        members.get(member).onError(Status.UNAVAILABLE.asException());
+        members.remove(member);
+        throw Status.UNAVAILABLE.asException();
+      }
       members.put(member, serverCallStreamObserver);
       log.info("Lobby {} - member joined {}:{}", clusterName, member.getHost(), member.getPort());
     }
