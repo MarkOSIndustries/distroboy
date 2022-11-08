@@ -11,12 +11,12 @@ RUN chmod +x ./gradlew
 RUN ./gradlew --version
 
 COPY . .
-RUN ./gradlew -Pversion_string=$VERSION clean installDist
+RUN ./gradlew -Pversion_string=$VERSION clean installDist --parallel
 
 # Coordinator
 FROM openjdk:15 as coordinator_runtime
 COPY --from=build_env /home/distroboy/coordinator/build/install/distroboy-coordinator/dependencies dependencies
-COPY --from=build_env /home/distroboy/coordinator/build/install/distroboy-coordinator/coordinator*.jar coordinator.jar
+COPY --from=build_env /home /distroboy/coordinator/build/install/distroboy-coordinator/coordinator*.jar coordinator.jar
 EXPOSE 7070
 CMD exec java -jar coordinator.jar
 
