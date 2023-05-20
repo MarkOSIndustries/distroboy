@@ -6,7 +6,6 @@ plugins {
 dependencies {
     api project(':core')
 
-    api platform('software.amazon.awssdk:bom:2.17.102')
+    api platform('software.amazon.awssdk:bom:2.20.63')
     api 'software.amazon.awssdk:s3'
-    api 'software.amazon.awssdk:apache-client'
 }

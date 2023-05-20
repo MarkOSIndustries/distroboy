@@ -13,7 +13,6 @@ import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.example.avro.SampleParquetOutputRecord;
-import com.markosindustries.distroboy.example.localstack.TempSdkHttpClientTrailingSlashAppender;
 import com.markosindustries.distroboy.example.schemas.StringWithNumber;
 import com.markosindustries.distroboy.parquet.ParquetAvroFilesWriterStrategy;
 import com.markosindustries.distroboy.parquet.ReadViaAvroFromParquetFiles;
@@ -26,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -42,8 +40,9 @@ public interface ExampleS3Client {
     }
     if (config.useLocalStackForS3()) {
       s3ClientBuilder
-          .httpClient(
-              new TempSdkHttpClientTrailingSlashAppender(ApacheHttpClient.builder().build()))
+          .forcePathStyle(
+              true) // switches the client from using bucketname.host/path to host/bucketname/path -
+          // which localstack needs
           .credentialsProvider(AnonymousCredentialsProvider.create());
     }
     final var s3Client = s3ClientBuilder.region(Region.of(config.awsRegion())).build();

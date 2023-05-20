@@ -15,23 +15,11 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
   localstack:
-    image: localstack/localstack:0.13.0.10
+    image: localstack/localstack:2.0.2
     ports:
-      - 53:53
-      - 443:443
-      - 4566:4566
-      - 4571:4571
+      - "4566:4566"
     environment:
-      - SERVICES=${SERVICES-s3}
-      - DEBUG=${DEBUG- }
-      - LS_LOG=debug
-      - DATA_DIR=${DATA_DIR- }
-      - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR- }
-      - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY- }
-      - KINESIS_ERROR_PROBABILITY=${KINESIS_ERROR_PROBABILITY- }
-      - DOCKER_HOST=unix:///var/run/docker.sock
-      - HOST_TMP_FOLDER=${TMPDIR:-/tmp/}localstack
+      - SERVICES=${SERVICES-sqs}
+      - LS_LOG=${LS_LOG-debug}
     volumes:
-      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./create-bucket.sh:/docker-entrypoint-initaws.d/create-bucket.sh"
+      - "./create-bucket.sh:/etc/localstack/init/ready.d/create-bucket.sh"
