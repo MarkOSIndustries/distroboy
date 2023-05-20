@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.18'
-    implementation 'gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.7.2'
-    implementation 'gradle.plugin.com.github.sherter.google-java-format:google-java-format-gradle-plugin:0.9'
+    implementation 'com.google.protobuf:protobuf-gradle-plugin:0.9.3'
+    implementation 'com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.14'
+    implementation 'com.diffplug.spotless:spotless-plugin-gradle:6.18.0'
 }

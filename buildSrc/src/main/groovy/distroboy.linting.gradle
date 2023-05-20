@@ -1,17 +1,17 @@
 plugins {
     id 'distroboy.common'
     id 'com.github.spotbugs'
-    id 'com.github.sherter.google-java-format'
+    id 'com.diffplug.spotless'
 }
 
-compileJava.dependsOn verifyGoogleJavaFormat
-
-googleJavaFormat {
-    toolVersion '1.9'
+spotless {
+    java {
+        googleJavaFormat('1.15.0')
+    }
 }
 
 dependencies {
-    implementation group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.5.2'
+    implementation group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.7.3'
 }
 
 spotbugs {

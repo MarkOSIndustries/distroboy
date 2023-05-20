@@ -10,7 +10,7 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value="googleJavaFormat" />
+          <option value="spotlessApply" />
           <option value="build" />
         </list>
       </option>
@@ -19,6 +19,7 @@
     <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
     <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
     <DebugAllEnabled>false</DebugAllEnabled>
+    <ForceTestExec>false</ForceTestExec>
     <method v="2" />
   </configuration>
 </component>
