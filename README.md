@@ -65,7 +65,7 @@ It reminded me of the cartoon AstroBoy, and seemed inoffensive enough
 [docs]:https://www.javadoc.io/doc/com.markosindustries.distroboy
 
 [maven-badge]:https://img.shields.io/maven-central/v/com.markosindustries.distroboy/core
-[maven]:https://search.maven.org/search?q=g:com.markosindustries.distroboy
+[maven]:https://central.sonatype.com/search?namespace=com.markosindustries.distroboy
 
 [docker-coordinator-badge]:https://img.shields.io/docker/v/markosindustries/distroboy-coordinator?sort=semver&logo=docker&label=docker%20(coordinator)
 [docker-coordinator]:https://hub.docker.com/r/markosindustries/distroboy-coordinator/tags
