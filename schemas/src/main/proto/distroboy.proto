@@ -67,10 +67,14 @@ message RepeatedValue {
 
 service ClusterMember {
   rpc identify(google.protobuf.Empty) returns (ClusterMemberIdentity);
+
   rpc process(DataSourceRange) returns (stream Value);
   rpc distribute(DataReferences) returns (google.protobuf.Empty);
+
   rpc retrieveRange(DataReferenceRange) returns (stream Value);
   rpc retrieveByHash(DataReferenceHashSpec) returns (stream Value);
+  rpc retrieveSortSamples(DataReference) returns (stream Value);
+  rpc retrieveSortRange(DataReferenceSortRange) returns (stream Value);
   rpc synchronise(google.protobuf.Empty) returns (Value);
 }
 
@@ -85,6 +89,7 @@ message DataReference {
     uint64 count = 3;
     bool uncountable = 4;
   }
+  bool sorted = 5;
 }
 
 message DataReferenceRange {
@@ -100,4 +105,14 @@ message DataReferenceHashSpec {
   DataReference reference = 1;
   uint32 hash = 2;
   uint32 modulo = 3;
+}
+
+message SortRange {
+  Value range_start_exclusive = 1;
+  Value range_end_inclusive = 2;
+}
+
+message DataReferenceSortRange {
+  DataReference reference = 1;
+  SortRange sort_range = 2;
 }

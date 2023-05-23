@@ -6,6 +6,7 @@ import com.markosindustries.distroboy.schemas.ClusterMemberIdentity;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceHashSpec;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
+import com.markosindustries.distroboy.schemas.DataReferenceSortRange;
 import com.markosindustries.distroboy.schemas.DataReferences;
 import com.markosindustries.distroboy.schemas.DataSourceRange;
 import com.markosindustries.distroboy.schemas.HostAndPort;
@@ -48,6 +49,7 @@ class ConnectionToClusterMember implements AutoCloseable {
   }
 
   public void distribute(List<DataReference> clusterMemberDataReferences) {
+    //noinspection ResultOfMethodCallIgnored
     member.distribute(
         DataReferences.newBuilder().addAllReferences(clusterMemberDataReferences).build());
   }
@@ -58,6 +60,14 @@ class ConnectionToClusterMember implements AutoCloseable {
 
   public Iterator<Value> retrieveByHash(DataReferenceHashSpec dataReferenceHashSpec) {
     return member.retrieveByHash(dataReferenceHashSpec);
+  }
+
+  public Iterator<Value> retrieveSortSamples(DataReference dataReference) {
+    return member.retrieveSortSamples(dataReference);
+  }
+
+  public Iterator<Value> retrieveSortRange(DataReferenceSortRange dataReferenceSortRange) {
+    return member.retrieveSortRange(dataReferenceSortRange);
   }
 
   public HostAndPort getHostAndPort() {

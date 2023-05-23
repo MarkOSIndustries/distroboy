@@ -5,6 +5,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /** Provides static helper methods for converting {@link Iterator}s to other types */
 public interface IteratorTo {
@@ -52,5 +56,31 @@ public interface IteratorTo {
       map.put(next.getKey(), next.getValue());
     }
     return map;
+  }
+
+  /**
+   * Convert an {@link IteratorWithResources} to a {@link Stream}
+   *
+   * @param <T> The type of values in the iterator
+   * @param it The iterator to produce a stream from
+   * @return A {@link List} containing the values
+   * @throws Exception if calling {@link IteratorWithResources#close()} fails
+   */
+  static <T> Stream<T> stream(IteratorWithResources<T> it) throws Exception {
+    try (it) {
+      return stream((Iterator<T>) it);
+    }
+  }
+
+  /**
+   * Convert an {@link Iterator} to a {@link Stream} by iterating through it
+   *
+   * @param <T> The type of values in the iterator
+   * @param it The iterator to produce a stream from
+   * @return A {@link List} containing the values
+   */
+  static <T> Stream<T> stream(Iterator<T> it) {
+    return StreamSupport.stream(
+        Spliterators.spliteratorUnknownSize(it, Spliterator.ORDERED), false);
   }
 }

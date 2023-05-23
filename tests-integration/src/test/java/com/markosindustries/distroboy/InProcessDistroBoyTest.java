@@ -3,21 +3,30 @@ package com.markosindustries.distroboy;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
+import ch.qos.logback.classic.Level;
 import com.markosindustries.distroboy.core.Hashing;
+import com.markosindustries.distroboy.core.Logging;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class InProcessDistroBoyTest {
+  @BeforeAll
+  public static void configureLogging() {
+    Logging.configureDefault().setLevel("com.markosindustries.distroboy", Level.DEBUG);
+  }
+
   @Test
   public void canRunAJob() throws Exception {
     final var expectedValues = List.of(1, 2, 3, 4, 5);
@@ -178,7 +187,7 @@ public class InProcessDistroBoyTest {
         cluster -> {
           AtomicReference<Long> timeOnLeaderRef = new AtomicReference<>();
           final var timeOnLeader =
-              cluster.waitAndDistributeToAllMembers(
+              cluster.waitAndReplicateToAllMembers(
                   () -> {
                     timeOnLeaderRef.set(System.currentTimeMillis());
                     return timeOnLeaderRef.get();
@@ -194,6 +203,42 @@ public class InProcessDistroBoyTest {
                   result -> {
                     Assertions.assertEquals(1, result.size());
                     Assertions.assertEquals(timeOnLeaderRef.get(), result.get(0));
+                  });
+        });
+  }
+
+  @Test
+  //  @Disabled
+  public void canUseRedistributeAndSortFromDisk() throws Exception {
+    final Comparator<Integer> comparator = Integer::compare;
+
+    final var inputValues = List.of(11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6);
+    final var expectedValues = new ArrayList<>(inputValues);
+    expectedValues.sort(comparator);
+
+    DistroBoySingleProcess.run(
+        "InProcessDistroBoyTest.canUseRedistributeAndSortFromDisk",
+        3,
+        cluster -> {
+          final var simpleJob =
+              DistributedOpSequence.readFrom(new StaticDataSource<>(inputValues))
+                  .persistAndSortToDisk(cluster, Serialisers.integerValues, comparator);
+
+          final var dataReferences = cluster.persistAndSort(simpleJob);
+
+          final var redistributeJob =
+              cluster
+                  .redistributeOrderingBy(dataReferences, comparator, Serialisers.integerValues)
+                  .collect(Serialisers.integerValues);
+
+          cluster
+              .execute(redistributeJob)
+              .onClusterLeader(
+                  sortedValues -> {
+                    Assertions.assertEquals(expectedValues.size(), sortedValues.size());
+                    for (int i = 0; i < expectedValues.size(); i++) {
+                      Assertions.assertEquals(expectedValues.get(i), sortedValues.get(i));
+                    }
                   });
         });
   }

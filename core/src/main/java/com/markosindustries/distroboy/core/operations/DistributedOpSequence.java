@@ -3,11 +3,13 @@ package com.markosindustries.distroboy.core.operations;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Count;
 import com.markosindustries.distroboy.core.PersistedDataReferenceList;
+import com.markosindustries.distroboy.core.SortedDataReferenceList;
 import com.markosindustries.distroboy.core.clustering.serialisation.ProtobufValues;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.schemas.DataReference;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -336,6 +338,24 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
       return new DistributedOpSequence<>(
           dataSource,
           operand.then(new PersistToDisk<>(cluster, serialiser)),
+          new ProtobufValues<>(DataReference::parseFrom));
+    }
+
+    /**
+     * Have each node in the cluster persist and locally sort its fragment of the data to disk.
+     * <b>WARNING:</b> if the data doesn't fit in the available temp dir space, the entire job will
+     * fail.
+     *
+     * @param cluster The {@link Cluster} on which data is being persisted
+     * @param serialiser A {@link Serialiser} for the data being persisted
+     * @return A new {@link DistributedOpSequence} whose result will be a set of {@link
+     *     DataReference}s to the data stored on each node
+     */
+    public DistributedOpSequence<I, DataReference, SortedDataReferenceList<O>> persistAndSortToDisk(
+        Cluster cluster, Serialiser<O> serialiser, Comparator<O> comparator) {
+      return new DistributedOpSequence<>(
+          dataSource,
+          operand.then(new PersistSortedToDisk<>(cluster, serialiser, comparator)),
           new ProtobufValues<>(DataReference::parseFrom));
     }
 

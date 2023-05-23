@@ -11,22 +11,29 @@ import com.markosindustries.distroboy.core.clustering.DistributableDataReference
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.FlatMappingIterator;
+import com.markosindustries.distroboy.core.iterators.IteratorTo;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResources;
+import com.markosindustries.distroboy.core.iterators.MergeSortingIteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.EvenlyRedistributedDataSource;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceHashSpec;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
+import com.markosindustries.distroboy.schemas.DataReferenceSortRange;
+import com.markosindustries.distroboy.schemas.SortRange;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -185,13 +192,13 @@ public final class Cluster implements AutoCloseable {
 
   /**
    * Wait for all cluster members to reach this line of code, then run the given {@link Supplier} on
-   * the cluster leader and distribute the result to all members. Useful for making distributed
+   * the cluster leader and replicate the result to all members. Useful for making distributed
    * decisions such as "should we continue this while loop?"
    *
    * @return The result of running the {@link Supplier} on the cluster leader, when all members have
    *     reached this line of code.
    */
-  public <T> T waitAndDistributeToAllMembers(
+  public <T> T waitAndReplicateToAllMembers(
       Supplier<T> supplyValueOnLeader, Serialiser<T> serialiser) {
     return clusterMember.synchroniseValueFromLeader(
         supplyValueOnLeader, serialiser, expectedClusterMembers);
@@ -221,10 +228,90 @@ public final class Cluster implements AutoCloseable {
       final var dataReferences = dataReferencesResult.getResult();
 
       // The members will all want remote data references from us
+      log.debug(
+          "Distributing {} of size {}",
+          dataReferences.getClass().getSimpleName(),
+          dataReferences.list().size());
       clusterMember.distributeDataReferences(dataReferences.list());
     }
 
+    log.debug("Awaiting distributed references as {}", this.clusterMemberId);
     return clusterMember.awaitDistributedDataReferences();
+  }
+
+  public <I> DistributedOpSequence.Builder<SortRange, I, List<I>> redistributeOrderingBy(
+      SortedDataReferenceList<I> dataReferences,
+      Comparator<I> comparator,
+      Serialiser<I> serialiser) {
+    final var dataReferencesForSelf =
+        dataReferences.list().stream()
+            .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
+            .collect(toUnmodifiableList());
+
+    // Step 1 (local data sort) is done before we get here, because we demand a
+    // SortedDataReferenceList
+
+    // Step 2 - Each data set collects N equidistant samples of its data, where N is node count
+    for (final DataReference dataReference : dataReferencesForSelf) {
+      clusterMember.takeSortSamples(dataReference, expectedClusterMembers);
+      clusterMember.<I>pushComparator(
+          dataReference, comparator, serialiser, expectedClusterMembers);
+    }
+
+    // Step 3 - leader sorts all samples, takes N samples from them and broadcasts to all nodes
+    final List<SortRange> clusterSortRanges =
+        waitAndReplicateToAllMembers(
+            () -> {
+              final var clusterWideSampleCount =
+                  dataReferences.list().size() * expectedClusterMembers;
+              final var sortedClusterWideSamples =
+                  dataReferences.list().stream()
+                      .flatMap(
+                          dataReference ->
+                              IteratorTo.stream(
+                                  serialiser.deserialiseIterator(
+                                      clusterMember.retrieveSortSamplesFromMember(
+                                          ClusterMemberId.fromBytes(dataReference.getMemberId()),
+                                          dataReference))))
+                      .sorted(comparator)
+                      .iterator();
+              final var rangeEndsInclusive =
+                  DistributedSampleSort.takeEquidistantSamples(
+                      clusterWideSampleCount, sortedClusterWideSamples, expectedClusterMembers);
+              rangeEndsInclusive.sort(comparator);
+
+              final var sortRanges = new ArrayList<SortRange>(expectedClusterMembers);
+              final var sortRangeBuilder = SortRange.newBuilder();
+              for (final I rangeEnd : rangeEndsInclusive) {
+                final var rangeEndValue = serialiser.serialise(rangeEnd);
+                sortRangeBuilder.setRangeEndInclusive(rangeEndValue);
+                sortRanges.add(sortRangeBuilder.build());
+                sortRangeBuilder.setRangeStartExclusive(rangeEndValue);
+              }
+              return sortRanges;
+            },
+            Serialisers.listEntries(Serialisers.protobufValues(SortRange::parseFrom)));
+
+    // Step 4 - each node retrieves the portion of the total data in the range it was given
+    final var sortRangesSource = new StaticDataSource<>(clusterSortRanges);
+    return DistributedOpSequence.readFrom(sortRangesSource)
+        .flatMap(
+            sortRange -> {
+              return new MergeSortingIteratorWithResources<>(
+                  dataReferences.list().stream()
+                      .map(
+                          dataReference -> {
+                            return serialiser.deserialiseIterator(
+                                clusterMember.retrieveSortRangeFromMember(
+                                    ClusterMemberId.fromBytes(dataReference.getMemberId()),
+                                    DataReferenceSortRange.newBuilder()
+                                        .setReference(dataReference)
+                                        .setSortRange(sortRange)
+                                        .build()));
+                          })
+                      .collect(Collectors.toList()),
+                  comparator);
+            });
   }
 
   /**
@@ -256,6 +343,22 @@ public final class Cluster implements AutoCloseable {
       DistributedOpSequence<I, DataReference, PersistedDataReferenceList<O>> opSequence)
       throws InterruptedException {
     return new PersistedDataReferenceList<O>(distributeReferencesRaw(opSequence));
+  }
+
+  /**
+   * Persist and locally sort the data in its current form across the cluster, and give all nodes
+   * references
+   *
+   * @param opSequence The set of operations to be performed before persisting the data
+   * @param <I> The input type
+   * @param <O> The output type
+   * @return A list of references to the persisted data
+   * @throws InterruptedException If interrupted while waiting for all references to be collected
+   */
+  public <I, O> SortedDataReferenceList<O> persistAndSort(
+      DistributedOpSequence<I, DataReference, SortedDataReferenceList<O>> opSequence)
+      throws InterruptedException {
+    return new SortedDataReferenceList<O>(distributeReferencesRaw(opSequence));
   }
 
   /**

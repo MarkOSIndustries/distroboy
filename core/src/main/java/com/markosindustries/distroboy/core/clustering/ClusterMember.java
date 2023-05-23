@@ -1,42 +1,30 @@
 package com.markosindustries.distroboy.core.clustering;
 
-import static com.markosindustries.distroboy.core.DataSourceRanges.describeRange;
 import static com.markosindustries.distroboy.core.DataSourceRanges.generateRanges;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
-import com.google.protobuf.Empty;
 import com.markosindustries.distroboy.core.Cluster;
+import com.markosindustries.distroboy.core.DistributedSampleSort;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
-import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DataSource;
-import com.markosindustries.distroboy.schemas.ClusterMemberGrpc;
-import com.markosindustries.distroboy.schemas.ClusterMemberIdentity;
 import com.markosindustries.distroboy.schemas.ClusterMembers;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceHashSpec;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
-import com.markosindustries.distroboy.schemas.DataReferences;
-import com.markosindustries.distroboy.schemas.DataSourceRange;
+import com.markosindustries.distroboy.schemas.DataReferenceSortRange;
 import com.markosindustries.distroboy.schemas.Value;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import io.grpc.Status;
-import io.grpc.stub.StreamObserver;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -47,23 +35,13 @@ import org.slf4j.LoggerFactory;
  * startup, answering queries from other members, and delegating work and queries to other cluster
  * members.
  */
-public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
-    implements AutoCloseable {
+public class ClusterMember implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ClusterMember.class);
-  private final BlockingQueue<Job> jobs;
-  private final ConcurrentMap<DataReferenceId, BlockingQueue<HashedDataReference<?>>>
-      dataReferenceHashers;
-  private final Object classifiersLock = new Object();
-  private final BlockingQueue<SynchronisationPoint> synchronisationPoints;
-  private final Object synchronisationPointsLock = new Object();
-  private final AtomicReference<DataReferences> distributedReferences = new AtomicReference<>(null);
-  private final Object distributedReferencesLock = new Object();
+
   private final Server memberServer;
   private final ConnectionToClusterMember[] members;
-  private final boolean isLeader;
   private final Map<ClusterMemberId, ConnectionToClusterMember> memberIdentities;
-  private final Cluster cluster;
-  private final DistributableData distributableData;
+  private final ClusterMemberState clusterMemberState;
 
   /**
    * Create a new ClusterMember, and join the specified cluster
@@ -72,12 +50,12 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    * @throws Exception If joining the cluster fails
    */
   public ClusterMember(Cluster cluster) throws Exception {
-    this.cluster = cluster;
-    this.jobs = new LinkedBlockingQueue<>();
-    this.dataReferenceHashers = new ConcurrentHashMap<>();
-    this.synchronisationPoints = new LinkedBlockingQueue<>();
-    this.distributableData = new DistributableData();
-    this.memberServer = ServerBuilder.forPort(cluster.memberPort).addService(this).build().start();
+    this.clusterMemberState = new ClusterMemberState();
+    this.memberServer =
+        ServerBuilder.forPort(cluster.memberPort)
+            .addService(new ClusterMemberListener(cluster, clusterMemberState))
+            .build()
+            .start();
 
     log.debug("{} - joining lobby", cluster.clusterName);
     try (final var coordinator =
@@ -88,13 +66,17 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
               cluster.memberPort,
               cluster.expectedClusterMembers,
               cluster.coordinatorLobbyTimeout);
+      this.clusterMemberState.isLeader = clusterMembers.getIsLeader();
       log.debug(
-          "{} - cluster started, isLeader={}", cluster.clusterName, clusterMembers.getIsLeader());
+          "{} - cluster started, isLeader={}, memberId={}",
+          cluster.clusterName,
+          this.clusterMemberState.isLeader,
+          cluster.clusterMemberId);
       this.members =
           clusterMembers.getClusterMembersList().stream()
               .map(ConnectionToClusterMember::new)
               .toArray(ConnectionToClusterMember[]::new);
-      this.isLeader = clusterMembers.getIsLeader();
+
       log.debug("{} - connected to {} workers", cluster.clusterName, this.members.length);
       this.memberIdentities =
           Arrays.stream(members)
@@ -114,7 +96,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    * @return <code>true</code> if the leader, otherwise <code>false</code>
    */
   public boolean isLeader() {
-    return isLeader;
+    return clusterMemberState.isLeader;
   }
 
   /**
@@ -171,6 +153,16 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     return getMember(memberId).retrieveByHash(dataReferenceHashSpec);
   }
 
+  public Iterator<Value> retrieveSortSamplesFromMember(
+      ClusterMemberId memberId, DataReference dataReference) {
+    return getMember(memberId).retrieveSortSamples(dataReference);
+  }
+
+  public Iterator<Value> retrieveSortRangeFromMember(
+      ClusterMemberId memberId, DataReferenceSortRange dataReferenceSortRange) {
+    return getMember(memberId).retrieveSortRange(dataReferenceSortRange);
+  }
+
   /**
    * Add a DistributableDataReference to the accessible set for other cluster members to retrieve.
    * Expected to be called when persistence-type operations are running
@@ -183,202 +175,23 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    */
   public <I> void addDistributableData(
       DataReferenceId referenceId, DistributableDataReference<I> distributableDataReference) {
-    distributableData.add(referenceId, distributableDataReference);
+    clusterMemberState.distributableData.add(referenceId, distributableDataReference);
   }
 
   private ConnectionToClusterMember getMember(ClusterMemberId memberId) {
     return memberIdentities.get(memberId);
   }
 
-  @Override
-  public void identify(Empty request, StreamObserver<ClusterMemberIdentity> responseObserver) {
-    responseObserver.onNext(
-        ClusterMemberIdentity.newBuilder().setNodeId(cluster.clusterMemberId.asBytes()).build());
-    responseObserver.onCompleted();
-  }
-
-  @Override
-  public void process(DataSourceRange dataSourceRange, StreamObserver<Value> responseObserver) {
-    try {
-      log.debug("Starting job {}", describeRange(dataSourceRange));
-      Job job = null;
-      while (job == null) {
-        try {
-          job = jobs.poll(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-          // Ignore, just try again
-        }
-      }
-
-      log.debug("Responding to job {}", describeRange(dataSourceRange));
-      try (IteratorWithResources<Value> iterator = job.execute(dataSourceRange)) {
-        // TODO: backpressure
-        while (iterator.hasNext()) {
-          final var value = iterator.next();
-          responseObserver.onNext(value);
-        }
-      }
-      responseObserver.onCompleted();
-      log.debug("Finished job {}", describeRange(dataSourceRange));
-    } catch (Exception e) {
-      log.error("Failed while executing job", e);
-      responseObserver.onError(Status.INTERNAL.asException());
-    }
-  }
-
-  @Override
-  public void distribute(DataReferences request, StreamObserver<Empty> responseObserver) {
-    synchronized (distributedReferencesLock) {
-      while (distributedReferences.get() != null) {
-        try {
-          distributedReferencesLock.wait();
-        } catch (InterruptedException e) {
-          // Ignore, keep trying...
-        }
-      }
-      distributedReferences.set(request);
-      distributedReferencesLock.notify();
-    }
-    responseObserver.onNext(Empty.newBuilder().build());
-    responseObserver.onCompleted();
-  }
-
-  @Override
-  public void retrieveRange(DataReferenceRange request, StreamObserver<Value> responseObserver) {
-    final var memberId = ClusterMemberId.fromBytes(request.getReference().getMemberId());
-    if (!cluster.clusterMemberId.equals(memberId)) {
-      log.error(
-          "Wrong memberId for data range retrieval, this is probably broken -- {} {}",
-          memberId,
-          cluster.clusterMemberId);
-    }
-
-    // TODO: backpressure
-    final var distributableDataReference =
-        distributableData.retrieve(
-            DataReferenceId.fromBytes(request.getReference().getReferenceId()));
-    try (final var iterator = distributableDataReference.getSerialisingIterator()) {
-      long startInclusive = request.getRange().getStartInclusive();
-      long endExclusive = request.getRange().getEndExclusive();
-      long currentIndex = 0;
-      while (iterator.hasNext()) {
-        try {
-          final var value = iterator.next();
-          if (currentIndex < startInclusive) {
-            continue;
-          }
-          if (currentIndex >= endExclusive) {
-            break;
-          }
-          responseObserver.onNext(value);
-        } finally {
-          currentIndex++;
-        }
-      }
-      responseObserver.onCompleted();
-    } catch (Exception e) {
-      log.warn("Failed to close persisted data iterator - likely resource leakage", e);
-      responseObserver.onError(Status.INTERNAL.asException());
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
-  public void retrieveByHash(
-      DataReferenceHashSpec request, StreamObserver<Value> responseObserver) {
-    final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
-    final var classifiersForDataReference =
-        dataReferenceHashers.computeIfAbsent(referenceId, dr -> new LinkedBlockingQueue<>());
-    HashedDataReference<?> hashedDataReference;
-    synchronized (classifiersLock) {
-      hashedDataReference = classifiersForDataReference.peek();
-      while (hashedDataReference == null) {
-        try {
-          classifiersLock.wait();
-        } catch (InterruptedException e) {
-          // Just try again
-        }
-        hashedDataReference = classifiersForDataReference.peek();
-      }
-    }
-
-    synchronized (hashedDataReference.lock) {
-      hashedDataReference.retrieversByHash.put(request.getHash(), responseObserver);
-      if (hashedDataReference.retrieversByHash.size()
-          == hashedDataReference.expectedRetrieveCount) {
-        // pop this one off the queue, it's being handled now
-        classifiersForDataReference.poll();
-        // TODO: backpressure
-        final var distributableDataReference = distributableData.retrieve(referenceId);
-
-        try (final var iteratorWithSerialiser =
-            distributableDataReference.getIteratorWithSerialiser()) {
-          while (iteratorWithSerialiser.hasNext()) {
-            final var next = iteratorWithSerialiser.next();
-            final var hash = Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
-            hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
-          }
-          for (StreamObserver<Value> retriever : hashedDataReference.retrieversByHash.values()) {
-            retriever.onCompleted();
-          }
-        } catch (Exception e) {
-          log.warn("Failed to close persisted data iterator - likely resource leakage", e);
-          responseObserver.onError(Status.INTERNAL.asException());
-          throw new RuntimeException(e);
-        }
-      }
-    }
-  }
-
-  @Override
-  public void synchronise(final Empty request, final StreamObserver<Value> responseObserver) {
-    // Only the leader should materialise the value and synchronise it
-    if (!isLeader) {
-      responseObserver.onError(Status.NOT_FOUND.asRuntimeException());
-      responseObserver.onCompleted();
-      return;
-    }
-
-    SynchronisationPoint synchronisationPoint;
-    synchronized (synchronisationPointsLock) {
-      synchronisationPoint = synchronisationPoints.peek();
-      while (synchronisationPoint == null) {
-        try {
-          synchronisationPointsLock.wait();
-        } catch (InterruptedException e) {
-          // Just try again
-        }
-        synchronisationPoint = synchronisationPoints.peek();
-      }
-    }
-
-    synchronisationPoint.countDownLatch.countDown();
-
-    while (true) {
-      try {
-        synchronisationPoint.countDownLatch.await();
-        break;
-      } catch (InterruptedException e) {
-        // just try again
-      }
-    }
-
-    // This one is now done, pop it off the queue
-    synchronisationPoints.poll();
-
-    responseObserver.onNext(synchronisationPoint.getSynchronisedValue());
-    responseObserver.onCompleted();
-  }
-
   public <T> T synchroniseValueFromLeader(
       Supplier<T> valueSupplier, Serialiser<T> valueSerialiser, int expectedSynchroniseCount) {
     if (isLeader()) {
-      synchronized (synchronisationPointsLock) {
-        synchronisationPoints.add(
-            new SynchronisationPoint(valueSupplier, valueSerialiser, expectedSynchroniseCount));
+      synchronized (clusterMemberState.synchronisationPointsLock) {
+        clusterMemberState.synchronisationPoints.add(
+            new ClusterMemberState.SynchronisationPoint(
+                valueSupplier, valueSerialiser, expectedSynchroniseCount));
         // Notify as many threads as could possibly be waiting
         for (int i = 0; i < members.length; i++) {
-          synchronisationPointsLock.notify();
+          clusterMemberState.synchronisationPointsLock.notify();
         }
       }
     }
@@ -398,53 +211,6 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
     throw new RuntimeException("No member responded with a synchronised value");
   }
 
-  static class SynchronisationPoint {
-    volatile Value synchronisedValue = null;
-    final Supplier<Value> supplyValue;
-    final CountDownLatch countDownLatch;
-
-    public <T> SynchronisationPoint(
-        final Supplier<T> valueSupplier,
-        final Serialiser<T> valueSerialiser,
-        final int expectedSynchroniseCount) {
-      supplyValue = () -> valueSerialiser.serialise(valueSupplier.get());
-      countDownLatch = new CountDownLatch(expectedSynchroniseCount);
-    }
-
-    public Value getSynchronisedValue() {
-      if (synchronisedValue == null) {
-        synchronized (this) {
-          if (synchronisedValue == null) {
-            synchronisedValue = supplyValue.get();
-          }
-        }
-      }
-      return synchronisedValue;
-    }
-  }
-
-  static class HashedDataReference<T> {
-    final DataReference dataReference;
-    final Function<T, Integer> hasher;
-    final int expectedRetrieveCount;
-    final Object lock;
-    final ConcurrentMap<Integer, StreamObserver<Value>> retrieversByHash;
-
-    public HashedDataReference(
-        DataReference dataReference, Function<T, Integer> hasher, int expectedRetrieveCount) {
-      this.dataReference = dataReference;
-      this.hasher = hasher;
-      this.expectedRetrieveCount = expectedRetrieveCount;
-      this.lock = new Object();
-      this.retrieversByHash = new ConcurrentHashMap<>();
-    }
-
-    @SuppressWarnings("unchecked")
-    public int hash(Object o) {
-      return hasher.apply((T) o);
-    }
-  }
-
   /**
    * Add a hash function expected to be used in a retrieval for a part of the job being run
    *
@@ -456,15 +222,36 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    */
   public <T> void pushHasher(
       DataReference dataReference, Function<T, Integer> hasher, int expectedRetrieveCount) {
-    synchronized (classifiersLock) {
-      final var hashersForDataReference =
-          dataReferenceHashers.computeIfAbsent(
-              DataReferenceId.fromBytes(dataReference.getReferenceId()),
-              dr -> new LinkedBlockingQueue<>());
-      hashersForDataReference.add(
-          new HashedDataReference<T>(dataReference, hasher, expectedRetrieveCount));
-      classifiersLock.notify();
-    }
+    clusterMemberState.dataReferenceHashers.supplyValue(
+        DataReferenceId.fromBytes(dataReference.getReferenceId()),
+        new ClusterMemberState.HashedDataReference<T>(
+            dataReference, hasher, expectedRetrieveCount));
+  }
+
+  public void takeSortSamples(DataReference dataReference, int sampleCount) {
+    final var samples =
+        DistributedSampleSort.takeEquidistantSamples(
+            dataReference.getCount(),
+            clusterMemberState
+                .distributableData
+                .retrieve(DataReferenceId.fromBytes(dataReference.getReferenceId()))
+                .getSerialisingIterator(),
+            sampleCount);
+
+    clusterMemberState.dataReferenceSortSamples.supplyValue(
+        DataReferenceId.fromBytes(dataReference.getReferenceId()),
+        new ClusterMemberState.DataReferenceSortSamples(dataReference, samples));
+  }
+
+  public <T> void pushComparator(
+      final DataReference dataReference,
+      final Comparator<T> comparator,
+      final Serialiser<T> serialiser,
+      final int expectedRetrieveCount) {
+    clusterMemberState.dataReferenceComparators.supplyValue(
+        DataReferenceId.fromBytes(dataReference.getReferenceId()),
+        new ClusterMemberState.SortedDataReference<T>(
+            dataReference, comparator, serialiser, expectedRetrieveCount));
   }
 
   /**
@@ -475,7 +262,7 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    * @param job The next job to be executed
    */
   public void addJob(Job job) {
-    jobs.add(job);
+    clusterMemberState.jobs.add(job);
   }
 
   /**
@@ -484,8 +271,9 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    * @param remoteDataReferences The references to the data being distributed
    */
   public void distributeDataReferences(List<DataReference> remoteDataReferences) {
-    for (ConnectionToClusterMember member : members) {
-      member.distribute(remoteDataReferences);
+    for (final var member : memberIdentities.entrySet()) {
+      log.debug("Distributing data references to {}", member.getKey());
+      member.getValue().distribute(remoteDataReferences);
     }
   }
 
@@ -496,12 +284,13 @@ public class ClusterMember extends ClusterMemberGrpc.ClusterMemberImplBase
    * @throws InterruptedException If interrupted while waiting
    */
   public List<DataReference> awaitDistributedDataReferences() throws InterruptedException {
-    synchronized (distributedReferencesLock) {
-      while (distributedReferences.get() == null) {
-        distributedReferencesLock.wait();
+    synchronized (clusterMemberState.distributedReferencesLock) {
+      while (clusterMemberState.distributedReferences.get() == null) {
+        clusterMemberState.distributedReferencesLock.wait();
       }
-      final var referencesList = distributedReferences.getAndSet(null).getReferencesList();
-      distributedReferencesLock.notify();
+      final var referencesList =
+          clusterMemberState.distributedReferences.getAndSet(null).getReferencesList();
+      clusterMemberState.distributedReferencesLock.notify();
       return referencesList;
     }
   }
