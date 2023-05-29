@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toMap;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
@@ -18,7 +19,7 @@ public class TimestampKafkaOffsetSpec implements KafkaOffsetSpec {
    *
    * @param instant The time to retrieve offsets for from Kafka
    */
-  public TimestampKafkaOffsetSpec(Instant instant) {
+  public TimestampKafkaOffsetSpec(final Instant instant) {
     this(instant.toEpochMilli());
   }
 
@@ -27,18 +28,19 @@ public class TimestampKafkaOffsetSpec implements KafkaOffsetSpec {
    *
    * @param timestampMs The UTC timestamp to retrieve offsets for from Kafka (in milliseconds)
    */
-  public TimestampKafkaOffsetSpec(long timestampMs) {
+  public TimestampKafkaOffsetSpec(final long timestampMs) {
     this.timestampMs = timestampMs;
   }
 
   @Override
   public <K, V> Map<TopicPartition, Long> getOffsets(
-      Consumer<K, V> kafkaConsumer, Collection<TopicPartition> topicPartitions) {
+      final Consumer<K, V> kafkaConsumer, final Collection<TopicPartition> topicPartitions) {
     return kafkaConsumer
         .offsetsForTimes(
             topicPartitions.stream().collect(toMap(Function.identity(), _ignored -> timestampMs)))
         .entrySet()
         .stream()
+        .filter(entry -> Objects.nonNull(entry.getValue()))
         .collect(toMap(Map.Entry::getKey, entry -> entry.getValue().offset()));
   }
 }

@@ -20,5 +20,5 @@ public interface KafkaOffsetSpec {
    * @return A map from each TopicPartition specified to it's offset according to this Spec.
    */
   <K, V> Map<TopicPartition, Long> getOffsets(
-      Consumer<K, V> kafkaConsumer, Collection<TopicPartition> topicPartitions);
+      final Consumer<K, V> kafkaConsumer, final Collection<TopicPartition> topicPartitions);
 }

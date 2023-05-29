@@ -13,7 +13,7 @@ import org.apache.kafka.common.TopicPartition;
 public class LatestKafkaOffsetSpec implements KafkaOffsetSpec {
   @Override
   public <K, V> Map<TopicPartition, Long> getOffsets(
-      Consumer<K, V> kafkaConsumer, Collection<TopicPartition> topicPartitions) {
+      final Consumer<K, V> kafkaConsumer, final Collection<TopicPartition> topicPartitions) {
     return kafkaConsumer.endOffsets(topicPartitions);
   }
 }

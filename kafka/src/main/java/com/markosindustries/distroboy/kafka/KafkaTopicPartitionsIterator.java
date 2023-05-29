@@ -1,6 +1,5 @@
 package com.markosindustries.distroboy.kafka;
 
-import com.google.common.collect.ImmutableMap;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import java.time.Duration;
 import java.util.Collection;
@@ -19,10 +18,8 @@ import org.apache.kafka.common.TopicPartition;
  * TopicPartition}s. Reads from the starting offsets (inclusive) to the ending offsets (exclusive)
  * specified.
  *
- * @param <K> The type of keys the {@link org.apache.kafka.clients.consumer.KafkaConsumer} will
- *     deserialise
- * @param <V> The type of values the {@link org.apache.kafka.clients.consumer.KafkaConsumer} will
- *     deserialise
+ * @param <K> The type of keys the {@link KafkaConsumer} will deserialise
+ * @param <V> The type of values the {@link KafkaConsumer} will deserialise
  */
 public class KafkaTopicPartitionsIterator<K, V>
     implements IteratorWithResources<ConsumerRecord<K, V>> {
@@ -33,19 +30,18 @@ public class KafkaTopicPartitionsIterator<K, V>
   private final LinkedList<ConsumerRecord<K, V>> records = new LinkedList<>();
 
   /**
-   * @param kafkaConfiguration An ImmutableMap of <a
+   * @param kafkaConfiguration A {@link Map} of <a
    *     href="http://kafka.apache.org/documentation.html#consumerconfigs" >Configuration</a> needed
-   *     to instantiate a KafkaConsumer {@link org.apache.kafka.clients.consumer.KafkaConsumer} to
-   *     communicate with Kafka via
+   *     to instantiate a {@link KafkaConsumer} to communicate with Kafka via
    * @param topicPartitions The set of {@link TopicPartition}s to iterate records from
    * @param startOffsetsInclusiveSpec The starting offset spec (inclusive)
    * @param endOffsetsExclusiveSpec The end offset spec (exclusive)
    */
   public KafkaTopicPartitionsIterator(
-      ImmutableMap<String, Object> kafkaConfiguration,
-      Collection<TopicPartition> topicPartitions,
-      KafkaOffsetSpec startOffsetsInclusiveSpec,
-      KafkaOffsetSpec endOffsetsExclusiveSpec) {
+      final Map<String, Object> kafkaConfiguration,
+      final Collection<TopicPartition> topicPartitions,
+      final KafkaOffsetSpec startOffsetsInclusiveSpec,
+      final KafkaOffsetSpec endOffsetsExclusiveSpec) {
     this.kafkaConsumer = new KafkaConsumer<>(kafkaConfiguration);
     this.partitions = new HashSet<>(topicPartitions);
     this.startOffsets = startOffsetsInclusiveSpec.getOffsets(kafkaConsumer, partitions);

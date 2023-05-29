@@ -1,12 +1,11 @@
 package com.markosindustries.distroboy.kafka;
 
-import com.google.common.collect.ImmutableMap;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DataSource;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -20,16 +19,14 @@ public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartitio
   private final List<TopicPartition> topicPartitions;
 
   /**
-   * @param kafkaConfiguration An ImmutableMap of <a
+   * @param kafkaConfiguration A {@link Map} of <a
    *     href="http://kafka.apache.org/documentation.html#consumerconfigs">Configuration</a> needed
-   *     * to instantiate a KafkaConsumer {@link org.apache.kafka.clients.consumer.KafkaConsumer} to
-   *     * communicate with Kafka via
+   *     to instantiate a {@link KafkaConsumer} to communicate with Kafka via
    * @param topics The set of topics to retrieve {@link TopicPartition}s for
    */
   public KafkaTopicPartitionsSource(
-      ImmutableMap<String, Object> kafkaConfiguration, Collection<String> topics) {
+      Map<String, Object> kafkaConfiguration, Collection<String> topics) {
     try (Consumer<?, ?> kafkaConsumer = new KafkaConsumer<>(kafkaConfiguration)) {
-
       this.topicPartitions =
           topics.stream()
               .flatMap(
@@ -39,7 +36,7 @@ public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartitio
               .map(
                   partitionInfo ->
                       new TopicPartition(partitionInfo.topic(), partitionInfo.partition()))
-              .collect(Collectors.toUnmodifiableList());
+              .toList();
     }
   }
 
@@ -55,6 +52,6 @@ public class KafkaTopicPartitionsSource implements DataSource<List<TopicPartitio
         topicPartitions.stream()
             .skip(startInclusive)
             .limit(endExclusive - startInclusive)
-            .collect(Collectors.toUnmodifiableList()));
+            .toList());
   }
 }
