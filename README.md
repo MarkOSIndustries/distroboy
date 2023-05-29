@@ -14,7 +14,7 @@ DistroBoy libraries are published to [maven central][maven]. Add a dependency on
 <dependency>
   <groupId>com.markosindustries.distroboy</groupId>
   <artifactId>core</artifactId>
-  <version>0.9.1</version>
+  <version>0.9.2</version>
 </dependency>
 ```
 
