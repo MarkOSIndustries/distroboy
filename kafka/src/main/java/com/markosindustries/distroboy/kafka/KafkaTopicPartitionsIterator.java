@@ -43,20 +43,15 @@ public class KafkaTopicPartitionsIterator<K, V>
       final KafkaOffsetSpec startOffsetsInclusiveSpec,
       final KafkaOffsetSpec endOffsetsExclusiveSpec) {
     this.kafkaConsumer = new KafkaConsumer<>(kafkaConfiguration);
-    this.partitions = new HashSet<>(topicPartitions);
-    this.startOffsets = startOffsetsInclusiveSpec.getOffsets(kafkaConsumer, partitions);
-    this.endOffsets = endOffsetsExclusiveSpec.getOffsets(kafkaConsumer, partitions);
 
-    var partitionIntersection = new HashSet<>(startOffsets.keySet());
-    partitionIntersection.retainAll(endOffsets.keySet());
+    this.startOffsets = startOffsetsInclusiveSpec.getOffsets(kafkaConsumer, topicPartitions);
+    this.endOffsets = endOffsetsExclusiveSpec.getOffsets(kafkaConsumer, topicPartitions);
 
+    this.partitions = new HashSet<>(startOffsets.keySet());
     // Remove partitions we don't have a start AND end offset for
-    partitions.stream().filter(p -> !partitionIntersection.contains(p)).forEach(partitions::remove);
-
+    this.partitions.retainAll(endOffsets.keySet());
     // Remove partitions we'll never get records for
-    partitionIntersection.stream()
-        .filter(p -> !(startOffsets.get(p) < endOffsets.get(p)))
-        .forEach(partitions::remove);
+    this.partitions.removeIf(p -> startOffsets.get(p) >= endOffsets.get(p));
 
     kafkaConsumer.assign(partitions);
     for (final var topicPartition : partitions) {
