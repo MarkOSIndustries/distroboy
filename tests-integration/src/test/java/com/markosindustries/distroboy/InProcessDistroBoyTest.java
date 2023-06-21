@@ -208,7 +208,6 @@ public class InProcessDistroBoyTest {
   }
 
   @Test
-  //  @Disabled
   public void canUseRedistributeAndSortFromDisk() throws Exception {
     final Comparator<Integer> comparator = Integer::compare;
 
@@ -241,5 +240,60 @@ public class InProcessDistroBoyTest {
                     }
                   });
         });
+  }
+
+  @Test
+  public void terminatesClusterWhenNonLeaderNodesThrowInDistributedJob() throws Exception {
+    final var expectedValues = List.of(1, 2, 3, 4, 5);
+    try {
+      DistroBoySingleProcess.run(
+          "InProcessDistroBoyTest.terminatesClusterWhenNonLeaderNodesThrowInDistributedJob",
+          3,
+          cluster -> {
+            final var simpleJob =
+                DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
+                    .map(
+                        x -> {
+                          if (!cluster.isLeader()) {
+                            throw new RuntimeException("I am dying on purpose");
+                          } else {
+                            return x;
+                          }
+                        })
+                    .count();
+            cluster.execute(simpleJob);
+
+            // Use a synchronisation so that it messes with the synchronise in cluster shutdown
+            cluster.waitForAllMembers();
+          });
+    } catch (Exception ex) {
+      // Noop
+    }
+    // The goal is to make it here without hanging
+  }
+
+  @Test
+  public void terminatesClusterWhenNonLeaderNodesThrowOutsideDistributedJob() throws Exception {
+    final var expectedValues = List.of(1, 2, 3, 4, 5);
+    try {
+      DistroBoySingleProcess.run(
+          "InProcessDistroBoyTest.terminatesClusterWhenNonLeaderNodesThrowOutsideDistributedJob",
+          3,
+          cluster -> {
+            final var simpleJob =
+                DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues)).count();
+            cluster.execute(simpleJob);
+
+            if (!cluster.isLeader()) {
+              throw new RuntimeException("I am dying on purpose");
+            }
+
+            // Use a synchronisation so that it messes with the synchronise in cluster shutdown
+            cluster.waitForAllMembers();
+          });
+    } catch (Exception ex) {
+      // Noop
+    }
+    // The goal is to make it here without hanging
   }
 }

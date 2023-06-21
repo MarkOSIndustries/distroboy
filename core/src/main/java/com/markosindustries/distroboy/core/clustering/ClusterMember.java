@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 public class ClusterMember implements AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(ClusterMember.class);
 
+  private final Cluster cluster;
   private final Server memberServer;
   private final ConnectionToClusterMember[] members;
   private final Map<ClusterMemberId, ConnectionToClusterMember> memberIdentities;
@@ -49,7 +51,8 @@ public class ClusterMember implements AutoCloseable {
    * @param cluster The details of the cluster to participate in
    * @throws Exception If joining the cluster fails
    */
-  public ClusterMember(Cluster cluster) throws Exception {
+  public ClusterMember(final Cluster cluster) throws Exception {
+    this.cluster = cluster;
     this.clusterMemberState = new ClusterMemberState();
     this.memberServer =
         ServerBuilder.forPort(cluster.memberPort)
@@ -182,13 +185,30 @@ public class ClusterMember implements AutoCloseable {
     return memberIdentities.get(memberId);
   }
 
+  private final AtomicInteger synchronisationIndex = new AtomicInteger(0);
+
   public <T> T synchroniseValueFromLeader(
       Supplier<T> valueSupplier, Serialiser<T> valueSerialiser, int expectedSynchroniseCount) {
+    final int index = synchronisationIndex.getAndIncrement();
+    return synchroniseValueFromLeader(
+        index, valueSupplier, valueSerialiser, expectedSynchroniseCount);
+  }
+
+  private void disband() {
+    synchroniseValueFromLeader(-1, () -> null, Serialisers.voidValues, members.length);
+  }
+
+  private <T> T synchroniseValueFromLeader(
+      int index,
+      Supplier<T> valueSupplier,
+      Serialiser<T> valueSerialiser,
+      int expectedSynchroniseCount) {
+
     if (isLeader()) {
       synchronized (clusterMemberState.synchronisationPointsLock) {
         clusterMemberState.synchronisationPoints.add(
             new ClusterMemberState.SynchronisationPoint(
-                valueSupplier, valueSerialiser, expectedSynchroniseCount));
+                index, valueSupplier, valueSerialiser, expectedSynchroniseCount));
         // Notify as many threads as could possibly be waiting
         for (int i = 0; i < members.length; i++) {
           clusterMemberState.synchronisationPointsLock.notify();
@@ -197,7 +217,7 @@ public class ClusterMember implements AutoCloseable {
     }
 
     for (final ConnectionToClusterMember member : members) {
-      final Optional<Value> synchronisedValue = member.synchronise();
+      final Optional<Value> synchronisedValue = member.synchronise(index);
       if (synchronisedValue.isPresent()) {
         try {
           return valueSerialiser.deserialise(synchronisedValue.get());
@@ -297,11 +317,15 @@ public class ClusterMember implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    log.debug("Closing");
+    log.debug("Closing {} isLeader={}", cluster.clusterMemberId, isLeader());
 
-    log.debug("Closing - synchronising {}", members.length);
-    synchroniseValueFromLeader(() -> null, Serialisers.voidValues, members.length);
-    log.debug("Closing - synchronised");
+    try {
+      log.debug("Closing - disbanding {}", members.length);
+      disband();
+      log.debug("Closing - disbanding");
+    } catch (Exception ex) {
+      log.debug("Closing - disband threw", ex);
+    }
 
     try {
       memberServer.shutdown();

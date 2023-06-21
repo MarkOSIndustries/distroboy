@@ -10,6 +10,7 @@ import com.markosindustries.distroboy.schemas.DataReferenceSortRange;
 import com.markosindustries.distroboy.schemas.DataReferences;
 import com.markosindustries.distroboy.schemas.DataSourceRange;
 import com.markosindustries.distroboy.schemas.HostAndPort;
+import com.markosindustries.distroboy.schemas.SynchronisationPoint;
 import com.markosindustries.distroboy.schemas.Value;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -74,9 +75,10 @@ class ConnectionToClusterMember implements AutoCloseable {
     return hostAndPort;
   }
 
-  public Optional<Value> synchronise() {
+  public Optional<Value> synchronise(int index) {
     try {
-      return Optional.of(member.synchronise(Empty.newBuilder().build()));
+      return Optional.of(
+          member.synchronise(SynchronisationPoint.newBuilder().setIndex(index).build()));
     } catch (StatusRuntimeException sre) {
       if (sre.getStatus() == Status.NOT_FOUND) {
         return Optional.empty();

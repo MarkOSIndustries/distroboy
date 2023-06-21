@@ -75,7 +75,7 @@ service ClusterMember {
   rpc retrieveByHash(DataReferenceHashSpec) returns (stream Value);
   rpc retrieveSortSamples(DataReference) returns (stream Value);
   rpc retrieveSortRange(DataReferenceSortRange) returns (stream Value);
-  rpc synchronise(google.protobuf.Empty) returns (Value);
+  rpc synchronise(SynchronisationPoint) returns (Value);
 }
 
 message ClusterMemberIdentity {
@@ -115,4 +115,8 @@ message SortRange {
 message DataReferenceSortRange {
   DataReference reference = 1;
   SortRange sort_range = 2;
+}
+
+message SynchronisationPoint {
+  int32 index = 1;
 }

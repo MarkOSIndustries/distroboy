@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -36,14 +37,23 @@ class ClusterMemberState {
   boolean isLeader;
 
   static class SynchronisationPoint {
+    final int index;
     volatile Value synchronisedValue = null;
     final Supplier<Value> supplyValue;
     final CountDownLatch countDownLatch;
+    /*
+     * Used to notify synchronisers that at least one cluster member
+     * has skipped ahead of this synchronisation point. Usually because
+     * they've thrown and are attempting to disband the cluster.
+     */
+    final AtomicBoolean shouldThrow = new AtomicBoolean(false);
 
     public <T> SynchronisationPoint(
+        final int index,
         final Supplier<T> valueSupplier,
         final Serialiser<T> valueSerialiser,
         final int expectedSynchroniseCount) {
+      this.index = index;
       supplyValue = () -> valueSerialiser.serialise(valueSupplier.get());
       countDownLatch = new CountDownLatch(expectedSynchroniseCount);
     }

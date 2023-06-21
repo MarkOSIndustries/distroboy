@@ -7,7 +7,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,9 @@ public class DistroBoySingleProcess {
 
               @Override
               public Thread newThread(final Runnable r) {
-                return new Thread(r, jobName + "-" + ai.incrementAndGet());
+                final var thread = new Thread(r, jobName + "-" + ai.incrementAndGet());
+                thread.setDaemon(false);
+                return thread;
               }
             });
     try {
@@ -59,17 +60,16 @@ public class DistroBoySingleProcess {
                                       .coordinator("localhost", COORDINATOR_PORT)
                                       .memberPort(MEMBER_PORTS_START_AT + threadIndex)
                                       .join()) {
+                                Thread.currentThread().setName(cluster.clusterMemberId.toString());
                                 job.startThread(cluster);
                               } catch (Exception e) {
                                 // It'll shut down..
-                                log.error(
-                                    "Node threw, cluster will shut down and test will likely hang",
-                                    e);
+                                log.error("Node threw, cluster will shut down", e);
+                                throw new RuntimeException("Node " + threadIndex + " threw", e);
                               }
                             },
                             executor);
                       })
-                  .collect(Collectors.toUnmodifiableList())
                   .toArray(CompletableFuture[]::new))
           .join();
     } finally {

@@ -13,6 +13,7 @@ import com.markosindustries.distroboy.schemas.DataReferenceRange;
 import com.markosindustries.distroboy.schemas.DataReferenceSortRange;
 import com.markosindustries.distroboy.schemas.DataReferences;
 import com.markosindustries.distroboy.schemas.DataSourceRange;
+import com.markosindustries.distroboy.schemas.SynchronisationPoint;
 import com.markosindustries.distroboy.schemas.Value;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -231,7 +232,8 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
   }
 
   @Override
-  public void synchronise(final Empty request, final StreamObserver<Value> responseObserver) {
+  public void synchronise(
+      final SynchronisationPoint request, final StreamObserver<Value> responseObserver) {
     // Only the leader should materialise the value and synchronise it
     if (!clusterMemberState.isLeader) {
       responseObserver.onError(Status.NOT_FOUND.asRuntimeException());
@@ -252,15 +254,26 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
       }
     }
 
-    synchronisationPoint.countDownLatch.countDown();
+    log.debug("Sync request {} {}", synchronisationPoint.index, request.getIndex());
+    if (synchronisationPoint.index != request.getIndex()) {
+      synchronisationPoint.shouldThrow.set(true);
+    } else {
+      synchronisationPoint.countDownLatch.countDown();
+    }
 
-    while (true) {
-      try {
-        synchronisationPoint.countDownLatch.await();
-        break;
-      } catch (InterruptedException e) {
-        // just try again
-      }
+    try {
+      do {
+        if (synchronisationPoint.shouldThrow.get()) {
+          responseObserver.onError(
+              new RuntimeException("Cluster needs to shut down, at least one member lost sync"));
+          return;
+        }
+      } while (!synchronisationPoint.countDownLatch.await(100, TimeUnit.MILLISECONDS));
+    } catch (InterruptedException e) {
+      synchronisationPoint.shouldThrow.set(true);
+      responseObserver.onError(
+          new RuntimeException("Cluster needs to shut down, interrupted during sync"));
+      return;
     }
 
     // This one is now done, pop it off the queue
