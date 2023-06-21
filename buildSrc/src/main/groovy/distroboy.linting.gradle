@@ -11,7 +11,7 @@ spotless {
 }
 
 dependencies {
-    implementation group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.7.3'
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.7.3'
 }
 
 spotbugs {

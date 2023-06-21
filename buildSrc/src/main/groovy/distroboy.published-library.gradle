@@ -64,5 +64,6 @@ publishing {
 }
 
 signing {
+    required { !project.hasProperty("disableSigning") }
     sign publishing.publications.mavenJava
 }
