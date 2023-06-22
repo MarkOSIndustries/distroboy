@@ -57,6 +57,7 @@ public class ClusterMember implements AutoCloseable {
     this.memberServer =
         ServerBuilder.forPort(cluster.memberPort)
             .addService(new ClusterMemberListener(cluster, clusterMemberState))
+            .intercept(new ServerCallAddressInterceptor())
             .build()
             .start();
 
@@ -324,7 +325,14 @@ public class ClusterMember implements AutoCloseable {
       disband();
       log.debug("Closing - disbanding");
     } catch (Exception ex) {
-      log.debug("Closing - disband threw", ex);
+      log.debug("Closing - disband threw, forcing...", ex);
+      for (final ConnectionToClusterMember member : members) {
+        try {
+          member.forceDisband();
+        } catch (Exception unused) {
+          // Nothing more to do
+        }
+      }
     }
 
     try {

@@ -34,6 +34,12 @@ class ClusterMemberState {
 
   final DistributableData distributableData = new DistributableData();
 
+  /*
+   * Used to notify cluster members that at least one cluster member
+   * has received an error, and will be attempting to disband.
+   */
+  final AtomicBoolean disbanding = new AtomicBoolean(false);
+
   boolean isLeader;
 
   static class SynchronisationPoint {
@@ -41,12 +47,6 @@ class ClusterMemberState {
     volatile Value synchronisedValue = null;
     final Supplier<Value> supplyValue;
     final CountDownLatch countDownLatch;
-    /*
-     * Used to notify synchronisers that at least one cluster member
-     * has skipped ahead of this synchronisation point. Usually because
-     * they've thrown and are attempting to disband the cluster.
-     */
-    final AtomicBoolean shouldThrow = new AtomicBoolean(false);
 
     public <T> SynchronisationPoint(
         final int index,

@@ -15,7 +15,7 @@ public class DistroBoySingleProcess {
   private static final Logger log = LoggerFactory.getLogger(DistroBoySingleProcess.class);
 
   private static final int COORDINATOR_PORT = 7170;
-  private static final int MEMBER_PORTS_START_AT = 7171;
+  private static final AtomicInteger MEMBER_PORTS = new AtomicInteger(7171);
   private static final DistroBoySingleProcess INSTANCE = new DistroBoySingleProcess();
 
   private DistroBoySingleProcess() {
@@ -58,7 +58,7 @@ public class DistroBoySingleProcess {
                               try (final var cluster =
                                   Cluster.newBuilder(jobName, workerThreads)
                                       .coordinator("localhost", COORDINATOR_PORT)
-                                      .memberPort(MEMBER_PORTS_START_AT + threadIndex)
+                                      .memberPort(MEMBER_PORTS.getAndIncrement())
                                       .join()) {
                                 Thread.currentThread().setName(cluster.clusterMemberId.toString());
                                 job.startThread(cluster);

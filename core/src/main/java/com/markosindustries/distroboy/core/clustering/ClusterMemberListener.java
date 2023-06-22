@@ -45,11 +45,7 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
       log.debug("{} Starting job {}", cluster.clusterMemberId, describeRange(dataSourceRange));
       Job job = null;
       while (job == null) {
-        try {
-          job = clusterMemberState.jobs.poll(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-          // Ignore, just try again
-        }
+        job = clusterMemberState.jobs.poll(10, TimeUnit.SECONDS);
       }
 
       log.debug("Responding to job {}", describeRange(dataSourceRange));
@@ -62,27 +58,33 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
       }
       responseObserver.onCompleted();
       log.debug("Finished job {}", describeRange(dataSourceRange));
-    } catch (Exception e) {
-      log.error("Failed while executing job", e);
+    } catch (Exception ex) {
+      log.error("Failed while executing job", ex);
+      clusterMemberState.disbanding.set(true);
       responseObserver.onError(Status.INTERNAL.asException());
     }
   }
 
   @Override
   public void distribute(DataReferences request, StreamObserver<Empty> responseObserver) {
-    synchronized (clusterMemberState.distributedReferencesLock) {
-      while (clusterMemberState.distributedReferences.get() != null) {
-        try {
-          clusterMemberState.distributedReferencesLock.wait();
-        } catch (InterruptedException e) {
-          // Ignore, keep trying...
+    try {
+      synchronized (clusterMemberState.distributedReferencesLock) {
+        while (clusterMemberState.distributedReferences.get() != null) {
+          if (clusterMemberState.disbanding.get()) {
+            throw new RuntimeException("Cluster needs to shut down, disbanding");
+          }
+          clusterMemberState.distributedReferencesLock.wait(100);
         }
+        clusterMemberState.distributedReferences.set(request);
+        clusterMemberState.distributedReferencesLock.notify();
       }
-      clusterMemberState.distributedReferences.set(request);
-      clusterMemberState.distributedReferencesLock.notify();
+      responseObserver.onNext(Empty.newBuilder().build());
+      responseObserver.onCompleted();
+    } catch (Exception ex) {
+      log.error("Failed while distributing references", ex);
+      clusterMemberState.disbanding.set(true);
+      responseObserver.onError(Status.INTERNAL.asException());
     }
-    responseObserver.onNext(Empty.newBuilder().build());
-    responseObserver.onCompleted();
   }
 
   @Override
@@ -118,117 +120,144 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
         }
       }
       responseObserver.onCompleted();
-    } catch (Exception e) {
-      log.warn("Failed to close persisted data iterator - likely resource leakage", e);
+    } catch (Exception ex) {
+      log.warn("Failed to close persisted data iterator - likely resource leakage", ex);
+      clusterMemberState.disbanding.set(true);
       responseObserver.onError(Status.INTERNAL.asException());
-      throw new RuntimeException(e);
     }
   }
 
   @Override
   public void retrieveByHash(
       DataReferenceHashSpec request, StreamObserver<Value> responseObserver) {
-    final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
+    try {
+      final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
 
-    LastOneInShutsTheDoor.join(
-            clusterMemberState.dataReferenceHashers,
-            referenceId,
-            new ClusterMemberState.HashRetriever(request.getHash(), responseObserver))
-        .ifPresent(
-            hashedDataReference -> {
-              // TODO: backpressure
-              final var distributableDataReference =
-                  clusterMemberState.distributableData.retrieve(referenceId);
+      LastOneInShutsTheDoor.join(
+              clusterMemberState.dataReferenceHashers,
+              referenceId,
+              new ClusterMemberState.HashRetriever(request.getHash(), responseObserver),
+              clusterMemberState.disbanding)
+          .ifPresent(
+              hashedDataReference -> {
+                // TODO: backpressure
+                final var distributableDataReference =
+                    clusterMemberState.distributableData.retrieve(referenceId);
 
-              try (final var iteratorWithSerialiser =
-                  distributableDataReference.getIteratorWithSerialiser()) {
-                while (iteratorWithSerialiser.hasNext()) {
-                  final var next = iteratorWithSerialiser.next();
-                  final var hash =
-                      Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
-                  hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
+                try (final var iteratorWithSerialiser =
+                    distributableDataReference.getIteratorWithSerialiser()) {
+                  while (iteratorWithSerialiser.hasNext()) {
+                    final var next = iteratorWithSerialiser.next();
+                    final var hash =
+                        Math.abs(hashedDataReference.hash(next.value) % request.getModulo());
+                    hashedDataReference.retrieversByHash.get(hash).onNext(next.serialise());
+                  }
+                  for (StreamObserver<Value> retriever :
+                      hashedDataReference.retrieversByHash.values()) {
+                    retriever.onCompleted();
+                  }
+                } catch (Exception ex) {
+                  log.warn("Failed to close persisted data iterator - likely resource leakage", ex);
+                  clusterMemberState.disbanding.set(true);
+                  for (StreamObserver<Value> retriever :
+                      hashedDataReference.retrieversByHash.values()) {
+                    try {
+                      retriever.onError(Status.INTERNAL.asException());
+                    } catch (Exception unused) {
+                      // Ignore, we probably already called onCompleted on this one
+                    }
+                  }
                 }
-                for (StreamObserver<Value> retriever :
-                    hashedDataReference.retrieversByHash.values()) {
-                  retriever.onCompleted();
-                }
-              } catch (Exception e) {
-                log.warn("Failed to close persisted data iterator - likely resource leakage", e);
-                responseObserver.onError(Status.INTERNAL.asException());
-                throw new RuntimeException(e);
-              }
-            });
+              });
+    } catch (Exception ex) {
+      log.warn("Failed to join retrieveByHash party");
+      clusterMemberState.disbanding.set(true);
+      responseObserver.onError(Status.INTERNAL.asException());
+    }
   }
 
   @Override
   public void retrieveSortSamples(
       final DataReference request, final StreamObserver<Value> responseObserver) {
-    final var referenceId = DataReferenceId.fromBytes(request.getReferenceId());
+    try {
+      final var referenceId = DataReferenceId.fromBytes(request.getReferenceId());
 
-    final var dataReferenceSortSamples =
-        clusterMemberState.dataReferenceSortSamples.awaitPollValue(referenceId);
-
-    for (final Value sample : dataReferenceSortSamples.samples()) {
-      responseObserver.onNext(sample);
+      final var dataReferenceSortSamples =
+          clusterMemberState.dataReferenceSortSamples.awaitPollValue(
+              referenceId, clusterMemberState.disbanding);
+      for (final Value sample : dataReferenceSortSamples.samples()) {
+        responseObserver.onNext(sample);
+      }
+      responseObserver.onCompleted();
+    } catch (Exception ex) {
+      log.warn("Failed to sent data samples");
+      clusterMemberState.disbanding.set(true);
+      responseObserver.onError(Status.INTERNAL.asException());
     }
-    responseObserver.onCompleted();
   }
 
   @Override
   public void retrieveSortRange(
       final DataReferenceSortRange request, final StreamObserver<Value> responseObserver) {
-    final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
-    final var memberId = ClusterMemberId.fromBytes(request.getReference().getMemberId());
-    if (!cluster.clusterMemberId.equals(memberId)) {
-      log.error(
-          "Wrong memberId for data range retrieval, this is probably broken -- {} {}",
-          memberId,
-          cluster.clusterMemberId);
-    }
+    try {
+      final var referenceId = DataReferenceId.fromBytes(request.getReference().getReferenceId());
+      final var memberId = ClusterMemberId.fromBytes(request.getReference().getMemberId());
+      if (!cluster.clusterMemberId.equals(memberId)) {
+        log.error(
+            "Wrong memberId for data range retrieval, this is probably broken -- {} {}",
+            memberId,
+            cluster.clusterMemberId);
+      }
 
-    LastOneInShutsTheDoor.join(
-            clusterMemberState.dataReferenceComparators,
-            referenceId,
-            new ClusterMemberState.SortRangeRetriever(request.getSortRange(), responseObserver))
-        .ifPresent(
-            sortedDataReference -> {
-              // TODO: backpressure
-              final var distributableDataReference =
-                  clusterMemberState.distributableData.retrieve(
-                      DataReferenceId.fromBytes(request.getReference().getReferenceId()));
+      LastOneInShutsTheDoor.join(
+              clusterMemberState.dataReferenceComparators,
+              referenceId,
+              new ClusterMemberState.SortRangeRetriever(request.getSortRange(), responseObserver),
+              clusterMemberState.disbanding)
+          .ifPresent(
+              sortedDataReference -> {
+                // TODO: backpressure
+                final var distributableDataReference =
+                    clusterMemberState.distributableData.retrieve(
+                        DataReferenceId.fromBytes(request.getReference().getReferenceId()));
 
-              final var orderedRangeRetrievers =
-                  sortedDataReference.retrieversByRangeEndInclusive.entrySet().iterator();
-              var currentRetriever = orderedRangeRetrievers.next();
-              try (final var iterator = distributableDataReference.getIteratorWithSerialiser()) {
-                while (iterator.hasNext()) {
-                  final var valueWithSerialiser = iterator.next();
-                  if (sortedDataReference.compare(
-                          valueWithSerialiser.value, currentRetriever.getKey())
-                      > 0) {
-                    currentRetriever.getValue().retriever().onCompleted();
-                    currentRetriever = orderedRangeRetrievers.next();
+                final var orderedRangeRetrievers =
+                    sortedDataReference.retrieversByRangeEndInclusive.entrySet().iterator();
+                var currentRetriever = orderedRangeRetrievers.next();
+                try (final var iterator = distributableDataReference.getIteratorWithSerialiser()) {
+                  while (iterator.hasNext()) {
+                    final var valueWithSerialiser = iterator.next();
+                    if (sortedDataReference.compare(
+                            valueWithSerialiser.value, currentRetriever.getKey())
+                        > 0) {
+                      currentRetriever.getValue().retriever().onCompleted();
+                      currentRetriever = orderedRangeRetrievers.next();
+                    }
+
+                    currentRetriever.getValue().retriever().onNext(valueWithSerialiser.serialise());
                   }
-
-                  currentRetriever.getValue().retriever().onNext(valueWithSerialiser.serialise());
+                  currentRetriever.getValue().retriever().onCompleted();
+                  while (orderedRangeRetrievers.hasNext()) {
+                    orderedRangeRetrievers.next().getValue().retriever().onCompleted();
+                  }
+                } catch (Exception ex) {
+                  log.warn("Failed to close persisted data iterator - likely resource leakage", ex);
+                  clusterMemberState.disbanding.set(true);
+                  currentRetriever.getValue().retriever().onError(Status.INTERNAL.asException());
+                  while (orderedRangeRetrievers.hasNext()) {
+                    orderedRangeRetrievers
+                        .next()
+                        .getValue()
+                        .retriever()
+                        .onError(Status.INTERNAL.asException());
+                  }
                 }
-                currentRetriever.getValue().retriever().onCompleted();
-                while (orderedRangeRetrievers.hasNext()) {
-                  orderedRangeRetrievers.next().getValue().retriever().onCompleted();
-                }
-              } catch (Exception e) {
-                log.warn("Failed to close persisted data iterator - likely resource leakage", e);
-                currentRetriever.getValue().retriever().onCompleted();
-                while (orderedRangeRetrievers.hasNext()) {
-                  orderedRangeRetrievers
-                      .next()
-                      .getValue()
-                      .retriever()
-                      .onError(Status.INTERNAL.asException());
-                }
-                throw new RuntimeException(e);
-              }
-            });
+              });
+    } catch (Exception ex) {
+      log.warn("Failed to join retrieveSortRange party");
+      clusterMemberState.disbanding.set(true);
+      responseObserver.onError(Status.INTERNAL.asException());
+    }
   }
 
   @Override
@@ -237,49 +266,49 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
     // Only the leader should materialise the value and synchronise it
     if (!clusterMemberState.isLeader) {
       responseObserver.onError(Status.NOT_FOUND.asRuntimeException());
-      responseObserver.onCompleted();
       return;
-    }
-
-    ClusterMemberState.SynchronisationPoint synchronisationPoint;
-    synchronized (clusterMemberState.synchronisationPointsLock) {
-      synchronisationPoint = clusterMemberState.synchronisationPoints.peek();
-      while (synchronisationPoint == null) {
-        try {
-          clusterMemberState.synchronisationPointsLock.wait();
-        } catch (InterruptedException e) {
-          // Just try again
-        }
-        synchronisationPoint = clusterMemberState.synchronisationPoints.peek();
-      }
-    }
-
-    log.debug("Sync request {} {}", synchronisationPoint.index, request.getIndex());
-    if (synchronisationPoint.index != request.getIndex()) {
-      synchronisationPoint.shouldThrow.set(true);
-    } else {
-      synchronisationPoint.countDownLatch.countDown();
     }
 
     try {
+      ClusterMemberState.SynchronisationPoint synchronisationPoint;
+      synchronized (clusterMemberState.synchronisationPointsLock) {
+        while ((synchronisationPoint = clusterMemberState.synchronisationPoints.peek()) == null) {
+          if (clusterMemberState.disbanding.get()) {
+            throw new RuntimeException("Cluster needs to shut down, disbanding");
+          }
+          clusterMemberState.synchronisationPointsLock.wait(100);
+        }
+      }
+
+      log.debug("Sync request {} {}", synchronisationPoint.index, request.getIndex());
+      if (synchronisationPoint.index != request.getIndex()) {
+        clusterMemberState.disbanding.set(true);
+      } else {
+        synchronisationPoint.countDownLatch.countDown();
+      }
+
       do {
-        if (synchronisationPoint.shouldThrow.get()) {
-          responseObserver.onError(
-              new RuntimeException("Cluster needs to shut down, at least one member lost sync"));
-          return;
+        if (clusterMemberState.disbanding.get()) {
+          throw new RuntimeException("Cluster needs to shut down, at least one member lost sync");
         }
       } while (!synchronisationPoint.countDownLatch.await(100, TimeUnit.MILLISECONDS));
-    } catch (InterruptedException e) {
-      synchronisationPoint.shouldThrow.set(true);
-      responseObserver.onError(
-          new RuntimeException("Cluster needs to shut down, interrupted during sync"));
-      return;
+
+      // This one is now done, pop it off the queue
+      clusterMemberState.synchronisationPoints.poll();
+
+      responseObserver.onNext(synchronisationPoint.getSynchronisedValue());
+      responseObserver.onCompleted();
+    } catch (Exception ex) {
+      log.error("Cluster needs to shut down", ex);
+      clusterMemberState.disbanding.set(true);
+      responseObserver.onError(Status.INTERNAL.asException());
     }
+  }
 
-    // This one is now done, pop it off the queue
-    clusterMemberState.synchronisationPoints.poll();
-
-    responseObserver.onNext(synchronisationPoint.getSynchronisedValue());
+  @Override
+  public void forceDisband(final Empty request, final StreamObserver<Empty> responseObserver) {
+    clusterMemberState.disbanding.set(true);
+    responseObserver.onNext(Empty.newBuilder().build());
     responseObserver.onCompleted();
   }
 }

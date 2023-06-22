@@ -87,6 +87,11 @@ class ConnectionToClusterMember implements AutoCloseable {
     }
   }
 
+  public void forceDisband() {
+    //noinspection ResultOfMethodCallIgnored
+    member.forceDisband(Empty.newBuilder().build());
+  }
+
   @Override
   public void close() throws Exception {
     channel.shutdown();

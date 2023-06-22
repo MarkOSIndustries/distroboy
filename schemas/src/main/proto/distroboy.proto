@@ -76,6 +76,8 @@ service ClusterMember {
   rpc retrieveSortSamples(DataReference) returns (stream Value);
   rpc retrieveSortRange(DataReferenceSortRange) returns (stream Value);
   rpc synchronise(SynchronisationPoint) returns (Value);
+
+  rpc forceDisband(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 message ClusterMemberIdentity {
