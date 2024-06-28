@@ -2,12 +2,8 @@ version: '3.4'
 services:
   zookeeper:
     image: zookeeper
-    ports:
-      - "2181:2181"
   kafka:
     image: wurstmeister/kafka
-    ports:
-      - "9092:9092"
     environment:
       KAFKA_ADVERTISED_HOST_NAME: kafka
       KAFKA_ADVERTISED_PORT: 9092
@@ -17,8 +13,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
   localstack:
     image: localstack/localstack:2.0.2
-    ports:
-      - "4566:4566"
     environment:
       - SERVICES=${SERVICES-sqs}
       - LS_LOG=${LS_LOG-debug}
