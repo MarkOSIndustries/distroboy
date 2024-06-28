@@ -77,8 +77,7 @@ class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoC
         while (cause instanceof ExecutionException) {
           cause = cause.getCause();
         }
-        if (cause instanceof StatusRuntimeException) {
-          StatusRuntimeException statusRuntimeException = (StatusRuntimeException) cause;
+        if (cause instanceof final StatusRuntimeException statusRuntimeException) {
           if (CODES_TO_RETRY_JOIN_CLUSTER_ON.contains(
               statusRuntimeException.getStatus().getCode())) {
             log.info(
@@ -107,7 +106,7 @@ class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoC
   public void close() throws Exception {
     channel.shutdown();
     while (!channel.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-      log.debug("Awaiting shutdown of channel to Cluster peer");
+      log.debug("Awaiting shutdown of channel to Coordinator");
     }
   }
 }
