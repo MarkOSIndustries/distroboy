@@ -21,6 +21,7 @@
     <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
     <DebugAllEnabled>false</DebugAllEnabled>
     <ForceTestExec>false</ForceTestExec>
+    <RunAsTest>true</RunAsTest>
     <method v="2" />
   </configuration>
 </component>
