@@ -63,13 +63,11 @@ public class ClusterMember implements AutoCloseable {
 
     log.debug("{} - joining lobby", cluster.clusterName);
     try (final var coordinator =
-        new ConnectionToCoordinator(cluster.coordinatorHost, cluster.coordinatorPort)) {
+        new ConnectionToCoordinator(
+            cluster.coordinatorHost, cluster.coordinatorPort, cluster.coordinatorLobbyTimeout)) {
       ClusterMembers clusterMembers =
           coordinator.joinCluster(
-              cluster.clusterName,
-              cluster.memberPort,
-              cluster.expectedClusterMembers,
-              cluster.coordinatorLobbyTimeout);
+              cluster.clusterName, cluster.memberPort, cluster.expectedClusterMembers);
       this.clusterMemberState.isLeader = clusterMembers.getIsLeader();
       log.debug(
           "{} - cluster started, isLeader={}, memberId={}",

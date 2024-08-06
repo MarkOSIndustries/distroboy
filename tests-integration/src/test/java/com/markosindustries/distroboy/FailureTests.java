@@ -2,6 +2,8 @@ package com.markosindustries.distroboy;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import ch.qos.logback.classic.Level;
 import com.markosindustries.distroboy.core.Hashing;
@@ -187,5 +189,21 @@ public class FailureTests {
       var ignored = unused;
     }
     // The goal is to make it here without hanging
+  }
+
+  @Test
+  public void timeoutHonouredWhenOneClusterMemberDoesNotShowUpToTheLobby() throws Exception {
+    assertThrows(
+        Exception.class,
+        () -> {
+          DistroBoySingleProcess.run(
+              "FailureTests.timeoutHonouredWhenOneClusterMemberDoesNotShowUpToTheLobby",
+              2,
+              3,
+              cluster -> {
+                fail("Cluster started with fewer members than it expected");
+                // We shouldn't get here, we're expecting to fail at lobby join
+              });
+        });
   }
 }

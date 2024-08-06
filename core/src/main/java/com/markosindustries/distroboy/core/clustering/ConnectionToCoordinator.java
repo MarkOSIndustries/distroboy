@@ -4,7 +4,6 @@ import com.markosindustries.distroboy.schemas.ClusterMembers;
 import com.markosindustries.distroboy.schemas.CoordinatorEvent;
 import com.markosindustries.distroboy.schemas.CoordinatorGrpc;
 import com.markosindustries.distroboy.schemas.JoinCluster;
-import com.markosindustries.distroboy.schemas.MemberEvent;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
@@ -23,19 +22,20 @@ class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoC
   private static final Logger log = LoggerFactory.getLogger(ConnectionToCoordinator.class);
 
   private final CoordinatorGrpc.CoordinatorFutureStub coordinator;
-  private final StreamObserver<MemberEvent> coordinatorStream;
   private final String coordinatorHost;
   private final int coordinatorPort;
   private final ManagedChannel channel;
 
   /** Represents a connection to the coordinator */
-  ConnectionToCoordinator(String coordinatorHost, int coordinatorPort) {
+  ConnectionToCoordinator(
+      String coordinatorHost, int coordinatorPort, final Duration lobbyTimeout) {
     this.coordinatorHost = coordinatorHost;
     this.coordinatorPort = coordinatorPort;
     this.channel =
         ManagedChannelBuilder.forAddress(coordinatorHost, coordinatorPort).usePlaintext().build();
-    this.coordinator = CoordinatorGrpc.newFutureStub(channel);
-    this.coordinatorStream = CoordinatorGrpc.newStub(channel).connect(this);
+    this.coordinator =
+        CoordinatorGrpc.newFutureStub(channel)
+            .withDeadlineAfter(lobbyTimeout.toMillis(), TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -58,8 +58,7 @@ class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoC
   private static final Set<Status.Code> CODES_TO_RETRY_JOIN_CLUSTER_ON =
       Set.of(Status.Code.UNAVAILABLE, Status.Code.ABORTED);
 
-  public ClusterMembers joinCluster(
-      String clusterName, int port, int expectedMembers, Duration timeout)
+  public ClusterMembers joinCluster(String clusterName, int port, int expectedMembers)
       throws ExecutionException, InterruptedException, TimeoutException {
     while (true) {
       try {
@@ -69,9 +68,7 @@ class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoC
                 .setMemberPort(port)
                 .setExpectedMembers(expectedMembers)
                 .build();
-
-        //    coordinatorStream.onNext(MemberEvent.newBuilder().setJoinJob(joinJob).build());
-        return coordinator.joinCluster(joinCluster).get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        return coordinator.joinCluster(joinCluster).get();
       } catch (ExecutionException | StatusRuntimeException ex) {
         Throwable cause = ex;
         while (cause instanceof ExecutionException) {
@@ -89,14 +86,14 @@ class ConnectionToCoordinator implements StreamObserver<CoordinatorEvent>, AutoC
             continue;
           }
           log.error(
-              "JoinCluster [{}:{}] failed with {}, failing",
+              "JoinCluster [{}:{}] failed with {}, giving up",
               coordinatorHost,
               coordinatorPort,
               statusRuntimeException.getStatus().getCode());
           throw statusRuntimeException;
         }
 
-        log.error("JoinCluster failed in an unexpected manner, failing", ex);
+        log.error("JoinCluster failed in an unexpected manner, giving up", ex);
         throw ex;
       }
     }
