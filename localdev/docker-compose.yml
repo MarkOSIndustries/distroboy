@@ -12,9 +12,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
   localstack:
-    image: localstack/localstack:2.0.2
+    image: localstack/localstack:3.8.1
     environment:
-      - SERVICES=${SERVICES-sqs}
+      - SERVICES=${SERVICES-s3}
       - LS_LOG=${LS_LOG-debug}
     volumes:
       - "./create-bucket.sh:/etc/localstack/init/ready.d/create-bucket.sh"
