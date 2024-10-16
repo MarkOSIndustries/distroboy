@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,7 +221,7 @@ public final class Cluster implements AutoCloseable {
   private <I, O> List<DataReference> distributeReferencesRaw(
       DistributedOpSequence<I, DataReference, ? extends DataReferenceList<O>> opSequence)
       throws InterruptedException {
-    final var dataReferencesResult = execute(opSequence);
+    final var dataReferencesResult = executeAsync(opSequence);
 
     if (dataReferencesResult.isClusterLeader()) {
       final var dataReferences = dataReferencesResult.getResult();
@@ -246,7 +245,7 @@ public final class Cluster implements AutoCloseable {
     final var dataReferencesForSelf =
         dataReferences.list().stream()
             .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
-            .collect(toUnmodifiableList());
+            .toList();
 
     // Step 1 (local data sort) is done before we get here, because we demand a
     // SortedDataReferenceList
@@ -309,7 +308,7 @@ public final class Cluster implements AutoCloseable {
                                         .setSortRange(sortRange)
                                         .build()));
                           })
-                      .collect(Collectors.toList()),
+                      .toList(),
                   comparator);
             });
   }
@@ -405,15 +404,14 @@ public final class Cluster implements AutoCloseable {
     final var dataReferencesForSelf =
         dataReferences.list().stream()
             .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
-            .collect(toUnmodifiableList());
+            .toList();
     for (final var dataReference : dataReferencesForSelf) {
       clusterMember.<I>pushHasher(
           dataReference, x -> hasher.apply(classifier.apply(x)), partitions);
     }
 
     final var hashesSource =
-        new StaticDataSource<>(
-            IntStream.range(0, partitions).boxed().collect(toUnmodifiableList()));
+        new StaticDataSource<>(IntStream.range(0, partitions).boxed().toList());
     return DistributedOpSequence.readFrom(hashesSource) // start with a hash value per node
         .mapToIterators(
             hash ->
@@ -451,7 +449,13 @@ public final class Cluster implements AutoCloseable {
   /**
    * Run the DistributedOpSequence on the cluster, and return a DistributedOpResult, which will
    * contain the collected results of all nodes' work on the leader. Care must be taken that this
-   * result isn't too large, as it must fit into working memory on the cluster leader.
+   * result isn't too large, as it must fit into working memory on the cluster leader. Unlike
+   * ${@link #execute(DistributedOpSequence)}, this method will <b>not</b> synchronise all cluster
+   * members at the end of this operation - they will continue execution before any work arrives for
+   * the distributed operation. It is easy to write race conditions with this, so prefer {@link
+   * #execute(DistributedOpSequence)}. If you must use this - you can use {@link
+   * #waitForAllMembers()} to ensure resources are still available when cluster members are
+   * eventually asked to perform the operation sequence.
    *
    * @param opSequence The DistributedOpSequence the cluster of nodes should execute
    * @param <I> The input type of the operation sequence
@@ -459,7 +463,8 @@ public final class Cluster implements AutoCloseable {
    * @param <C> The collection type of the operation sequence.
    * @return The DistributedOpResult (which contains the collected results on the leader node)
    */
-  public <I, O, C> DistributedOpResult<C> execute(DistributedOpSequence<I, O, C> opSequence) {
+  public <I, O, C> AsyncDistributedOpResult<C> executeAsync(
+      DistributedOpSequence<I, O, C> opSequence) {
     clusterMember.addJob(
         dataSourceRange -> {
           final var iterator = opSequence.getOperand().enumerateRangeForNode(dataSourceRange);
@@ -468,7 +473,7 @@ public final class Cluster implements AutoCloseable {
         });
 
     if (!clusterMember.isLeader()) {
-      return new DistributedOpResult.WorkerResult<>();
+      return new AsyncDistributedOpResult.WorkerResult<>();
     }
 
     log.debug("{} - distributing to {}", clusterName, expectedClusterMembers);
@@ -480,7 +485,23 @@ public final class Cluster implements AutoCloseable {
             memberJobs.iterator(),
             memberJob -> opSequence.getSerialiser().deserialiseIterator(memberJob.join()));
 
-    return new DistributedOpResult.LeaderResult<>(opSequence.getOperand().collect(results));
+    return new AsyncDistributedOpResult.LeaderResult<>(opSequence.getOperand().collect(results));
+  }
+
+  /**
+   * Run the DistributedOpSequence on the cluster, and return a DistributedOpResult, which will
+   * contain the collected results of all nodes' work on the leader. Care must be taken that this
+   * result isn't too large, as it must fit into working memory on the cluster leader. All cluster
+   * members will block here until the results have been collected on the leader.
+   *
+   * @param opSequence The DistributedOpSequence the cluster of nodes should execute
+   * @param <I> The input type of the operation sequence
+   * @param <O> The output type of the operation sequence
+   * @param <C> The collection type of the operation sequence.
+   * @return The DistributedOpResult (which contains the collected results on the leader node)
+   */
+  public <I, O, C> DistributedOpResult<C> execute(DistributedOpSequence<I, O, C> opSequence) {
+    return executeAsync(opSequence).waitForAllMembers(this);
   }
 
   private <O> Iterator<O> retrieveRange(

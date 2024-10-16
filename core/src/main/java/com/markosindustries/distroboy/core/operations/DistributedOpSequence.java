@@ -284,7 +284,7 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
     }
 
     /**
-     * Finish building the {@link DistributedOpSequence} and return it, read to execute on a
+     * Finish building the {@link DistributedOpSequence} and return it, ready to execute on a
      * distroboy cluster.
      *
      * @param serialiser A serialiser for the output type of the sequence.

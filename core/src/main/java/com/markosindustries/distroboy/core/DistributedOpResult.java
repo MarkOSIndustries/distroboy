@@ -33,7 +33,7 @@ public interface DistributedOpResult<T> {
    * @param <U> The resulting type of the transformation
    * @return A new DistributedOpResult which has been transformed.
    */
-  <U> DistributedOpResult<U> map(Function<T, U> mapper);
+  <U> DistributedOpResult<U> mapOnLeader(Function<T, U> mapper);
 
   /**
    * Runs the given consumer with the operation result if and only if this node is the cluster
@@ -70,7 +70,7 @@ public interface DistributedOpResult<T> {
     }
 
     @Override
-    public <U> DistributedOpResult<U> map(Function<T, U> mapper) {
+    public <U> DistributedOpResult<U> mapOnLeader(Function<T, U> mapper) {
       return new LeaderResult<>(mapper.apply(result));
     }
   }
@@ -92,7 +92,7 @@ public interface DistributedOpResult<T> {
     }
 
     @Override
-    public <U> DistributedOpResult<U> map(Function<T, U> mapper) {
+    public <U> DistributedOpResult<U> mapOnLeader(Function<T, U> mapper) {
       return new WorkerResult<>();
     }
   }

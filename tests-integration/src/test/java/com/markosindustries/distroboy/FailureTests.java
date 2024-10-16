@@ -37,7 +37,7 @@ public class FailureTests {
           cluster -> {
             final var simpleJob =
                 DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues)).count();
-            cluster.execute(simpleJob);
+            cluster.executeAsync(simpleJob);
 
             if (!cluster.isLeader()) {
               throw new RuntimeException("I am dying on purpose");
@@ -115,7 +115,7 @@ public class FailureTests {
                             Serialisers.listEntries(Serialisers.integerValues)));
 
             cluster
-                .execute(groupedDataJob)
+                .executeAsync(groupedDataJob)
                 .onClusterLeader(
                     actualMap -> {
                       Assertions.assertIterableEquals(expectedMap.keySet(), actualMap.keySet());
@@ -186,7 +186,6 @@ public class FailureTests {
           });
     } catch (Exception unused) {
       // Noop
-      var ignored = unused;
     }
     // The goal is to make it here without hanging
   }
