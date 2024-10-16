@@ -1,10 +1,10 @@
 plugins {
-    id 'distroboy.published-library'
-    id 'distroboy.linting'
+  id 'distroboy.published-library'
+  id 'distroboy.linting'
 }
 
 dependencies {
-    api group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.10'
-    api group: 'org.slf4j', name: 'slf4j-api', version: '1.7.32'
-    api project(':schemas')
+  api group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.10'
+  api group: 'org.slf4j', name: 'slf4j-api', version: '1.7.32'
+  api project(':schemas')
 }

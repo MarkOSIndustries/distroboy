@@ -1,7 +1,7 @@
 plugins {
-    id 'distroboy.linting'
+  id 'distroboy.linting'
 }
 
 dependencies {
-    testImplementation project(':core')
+  testImplementation project(':core')
 }

@@ -1,19 +1,25 @@
 plugins {
-    id 'distroboy.common'
-    id 'com.github.spotbugs'
-    id 'com.diffplug.spotless'
+  id 'distroboy.common'
+  id 'com.github.spotbugs'
+  id 'com.diffplug.spotless'
 }
 
 spotless {
-    java {
-        googleJavaFormat('1.15.0')
-    }
+  java {
+    googleJavaFormat('1.15.0')
+  }
+  groovyGradle {
+    target '*.gradle'
+    greclipse()
+    trimTrailingWhitespace()
+      indentWithSpaces(2)
+  }
 }
 
 dependencies {
-    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.7.3'
+  compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.7.3'
 }
 
 spotbugs {
-    excludeFilter = project.parent.file("spotbugs.excludes.xml")
+  excludeFilter = project.parent.file("spotbugs.excludes.xml")
 }

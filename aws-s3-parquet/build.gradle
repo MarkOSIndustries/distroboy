@@ -1,9 +1,9 @@
 plugins {
-    id 'distroboy.published-library'
-    id 'distroboy.linting'
+  id 'distroboy.published-library'
+  id 'distroboy.linting'
 }
 
 dependencies {
-    api project(':aws-s3')
-    api project(':parquet')
+  api project(':aws-s3')
+  api project(':parquet')
 }

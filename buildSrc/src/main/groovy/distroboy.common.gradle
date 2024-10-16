@@ -1,30 +1,32 @@
 plugins {
-    id 'java'
+  id 'java'
 }
 
 jar {
-    manifest {
-        attributes (
-                'Implementation-Title': "${project.group}.${project.name}",
-                'Implementation-Version': "${version_string}",
-                'DistroBoy-CommitSHA': "${commit_sha}"
-        )
-    }
+  manifest {
+    attributes (
+        'Implementation-Title': "${project.group}.${project.name}",
+        'Implementation-Version': "${version_string}",
+        'DistroBoy-CommitSHA': "${commit_sha}"
+    )
+  }
 }
 
-targetCompatibility = 17
-sourceCompatibility = 17
+java {
+  targetCompatibility = 17
+  sourceCompatibility = 17
+}
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs << '-Xlint:unchecked'
-    options.deprecation = true
+  options.compilerArgs << '-Xlint:unchecked'
+  options.deprecation = true
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+  testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
 }
 
 test {
-    useJUnitPlatform()
+  useJUnitPlatform()
 }

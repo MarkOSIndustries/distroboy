@@ -1,11 +1,11 @@
 plugins {
-    id 'distroboy.published-library'
-    id 'distroboy.linting'
+  id 'distroboy.published-library'
+  id 'distroboy.linting'
 }
 
 dependencies {
-    api project(':core')
+  api project(':core')
 
-    api platform('software.amazon.awssdk:bom:2.20.63')
-    api 'software.amazon.awssdk:s3'
+  api platform('software.amazon.awssdk:bom:2.20.63')
+  api 'software.amazon.awssdk:s3'
 }

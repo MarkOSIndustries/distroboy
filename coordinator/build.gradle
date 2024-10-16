@@ -1,8 +1,8 @@
 plugins {
-    id 'distroboy.executable-jar-with-dependencies'
-    id 'distroboy.linting'
+  id 'distroboy.executable-jar-with-dependencies'
+  id 'distroboy.linting'
 }
 
 dependencies {
-    implementation project(':core')
+  implementation project(':core')
 }
