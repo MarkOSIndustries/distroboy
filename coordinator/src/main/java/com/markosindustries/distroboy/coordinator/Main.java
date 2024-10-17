@@ -1,7 +1,7 @@
 package com.markosindustries.distroboy.coordinator;
 
 import com.markosindustries.distroboy.core.Coordinator;
-import com.markosindustries.distroboy.core.Logging;
+import com.markosindustries.distroboy.logback.Logging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

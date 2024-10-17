@@ -1,4 +1,4 @@
-package com.markosindustries.distroboy.core;
+package com.markosindustries.distroboy.logback;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;

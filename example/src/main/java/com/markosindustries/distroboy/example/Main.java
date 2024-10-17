@@ -2,11 +2,11 @@ package com.markosindustries.distroboy.example;
 
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.Hashing;
-import com.markosindustries.distroboy.core.Logging;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.example.filesystem.DirSource;
 import com.markosindustries.distroboy.example.filesystem.ReadLinesFromFiles;
+import com.markosindustries.distroboy.logback.Logging;
 import org.aeonbits.owner.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

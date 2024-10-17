@@ -7,11 +7,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import ch.qos.logback.classic.Level;
 import com.markosindustries.distroboy.core.Hashing;
-import com.markosindustries.distroboy.core.Logging;
 import com.markosindustries.distroboy.core.clustering.serialisation.IntegerValues;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
+import com.markosindustries.distroboy.logback.Logging;
 import com.markosindustries.distroboy.schemas.Value;
 import java.util.ArrayList;
 import java.util.Comparator;

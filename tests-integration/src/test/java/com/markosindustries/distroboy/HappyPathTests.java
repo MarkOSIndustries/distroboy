@@ -5,11 +5,11 @@ import static java.util.stream.Collectors.toList;
 
 import ch.qos.logback.classic.Level;
 import com.markosindustries.distroboy.core.Hashing;
-import com.markosindustries.distroboy.core.Logging;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
+import com.markosindustries.distroboy.logback.Logging;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
