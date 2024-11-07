@@ -3,8 +3,10 @@ package com.markosindustries.distroboy.core.clustering.serialisation;
 import com.google.protobuf.MessageLite;
 import com.markosindustries.distroboy.core.protobuf.ParseFromByteString;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Provides singletons and factory methods for default serialisers */
@@ -40,28 +42,42 @@ public interface Serialisers {
   }
 
   /**
-   * Serialiser factory for {@link java.util.List}s of values
+   * Serialiser factory for {@link java.util.Set}s of values
    *
-   * @param serialiser The serialiser for the type the lists contain
-   * @param <T> The type the lists contain
-   * @return A serialiser for Lists of values
+   * @param serialiser The serialiser for the type the sets contain
+   * @param <T> The type the sets contain
+   * @return A serialiser for Sets of values
    */
   static <T> CollectionValues<T, Set<T>> setEntries(Serialiser<T> serialiser) {
     return new CollectionValues<>(HashSet::new, serialiser);
   }
 
   /**
-   * Serialiser factory for {@link java.util.List}s of values
+   * Serialiser factory for {@link java.util.Map.Entry} values
    *
-   * @param keySerialiser The serialiser for the key type the maps contain
-   * @param valueSerialiser The serialiser for the value type the maps contain
-   * @param <K> The type of key the maps contain
-   * @param <V> The type of value the maps contain
-   * @return A serialiser for Maps of values
+   * @param keySerialiser The serialiser for the key type the map entries contain
+   * @param valueSerialiser The serialiser for the value type the map entries contain
+   * @param <K> The type of key the map entries contain
+   * @param <V> The type of value the map entries contain
+   * @return A serialiser for Map.Entry values
    */
   static <K, V> MapEntries<K, V> mapEntries(
       Serialiser<K> keySerialiser, Serialiser<V> valueSerialiser) {
     return new MapEntries<>(keySerialiser, valueSerialiser);
+  }
+
+  /**
+   * Serialiser factory for {@link java.util.Map}s of keys to values
+   *
+   * @param keySerialiser The serialiser for the key type the map entries contain
+   * @param valueSerialiser The serialiser for the value type the map entries contain
+   * @param <K> The type of key the map entries contain
+   * @param <V> The type of value the map entries contain
+   * @return A serialiser for Maps of keys to values
+   */
+  static <K, V> MapSerialiser<K, V, Map<K, V>> hashMaps(
+      Serialiser<K> keySerialiser, Serialiser<V> valueSerialiser) {
+    return new MapSerialiser<>(HashMap::new, keySerialiser, valueSerialiser);
   }
 
   /**
