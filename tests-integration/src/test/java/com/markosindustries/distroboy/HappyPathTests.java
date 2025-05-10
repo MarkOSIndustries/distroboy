@@ -241,4 +241,38 @@ public class HappyPathTests {
                   });
         });
   }
+
+  @Test
+  public void canUseBatchingToDistributeDataLargerThanGRPCMessageSizeLimit() throws Exception {
+    final var expectedString =
+        "This string is longer than 100 bytes, but that's only because I'm still typing. You'd really think there'd be a simpler way to generate enough data to exceed the max message size setting";
+
+    DistroBoySingleProcess.run(
+        "InProcessDistroBoyTest.canUseBatchingToDistributeDataLargerThanGRPCMessageSizeLimit",
+        3,
+        cluster -> cluster.maxGrpcMessageSize(100),
+        cluster -> {
+          // This is a bit silly, we send the string in batches of 10 characters, but it tests the
+          // idea...
+          final var batchIterator =
+              cluster.waitAndReplicateToAllMembersInBatches(
+                  10,
+                  () -> expectedString.chars().mapToObj(ch -> String.valueOf((char) ch)).toList(),
+                  Serialisers.stringValues);
+          final var stringBuilder = new StringBuilder();
+          int appendCount = 0;
+          while (batchIterator.hasNext()) {
+            stringBuilder.append(String.join("", batchIterator.next()));
+            appendCount++;
+          }
+
+          Assertions.assertEquals(expectedString, stringBuilder.toString());
+          Assertions.assertEquals(ceilDiv(expectedString.length(), 10), appendCount);
+        });
+  }
+
+  private static int ceilDiv(int numerator, int denominator) {
+    final var floor = Math.floorDiv(numerator, denominator);
+    return (numerator % denominator == 0 ? floor : floor + 1);
+  }
 }

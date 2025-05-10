@@ -205,4 +205,25 @@ public class FailureTests {
               });
         });
   }
+
+  @Test
+  public void terminatesClusterWhenAnAttemptToDistributeDataExceedingGRPCMessageSizeIsMade()
+      throws Exception {
+    try {
+      DistroBoySingleProcess.run(
+          "FailureTests.terminatesClusterWhenAnAttemptToDistributeDataExceedingGRPCMessageSizeIsMade",
+          3,
+          cluster -> cluster.maxGrpcMessageSize(100),
+          cluster -> {
+            final var someString =
+                cluster.waitAndReplicateToAllMembers(
+                    () ->
+                        "This string is longer than 100 bytes, but that's only because I'm still typing. You'd really think there'd be a simpler way to generate enough data to exceed the max message size setting",
+                    Serialisers.stringValues);
+          });
+    } catch (Exception unused) {
+      // Noop
+    }
+    // The goal is to make it here without hanging
+  }
 }

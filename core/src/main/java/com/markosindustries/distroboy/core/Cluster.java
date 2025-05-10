@@ -4,10 +4,12 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
+import com.google.common.collect.Iterables;
 import com.markosindustries.distroboy.core.clustering.ClusterMember;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.DataReferenceId;
 import com.markosindustries.distroboy.core.clustering.DistributableDataReference;
+import com.markosindustries.distroboy.core.clustering.DistributedIterator;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.FlatMappingIterator;
@@ -65,6 +67,8 @@ public final class Cluster implements AutoCloseable {
     private int coordinatorPort = 7070;
     private Duration coordinatorLobbyTimeout = Duration.ofMinutes(5);
     private int memberPort = 7071;
+    private int maxGrpcMessageSize =
+        4 * 1024 * 1024; // this is the default in the NettyGrpcServer implementation
 
     private Builder(String clusterName, int expectedClusterMembers) {
       this.clusterName = clusterName;
@@ -108,6 +112,19 @@ public final class Cluster implements AutoCloseable {
     }
 
     /**
+     * Set the maximum bytes allowed to be transmitted in one message across the cluster's mesh GRPC
+     * connections
+     *
+     * @param maxGrpcMessageSize the maximum bytes allowed to be transmitted in one message across
+     *     the cluster's mesh GRPC connections
+     * @return this
+     */
+    public Builder maxGrpcMessageSize(int maxGrpcMessageSize) {
+      this.maxGrpcMessageSize = maxGrpcMessageSize;
+      return this;
+    }
+
+    /**
      * Join the cluster and await all other cluster members
      *
      * @return A Cluster ready to run distributed operations
@@ -123,7 +140,8 @@ public final class Cluster implements AutoCloseable {
           coordinatorHost,
           coordinatorPort,
           coordinatorLobbyTimeout,
-          memberPort);
+          memberPort,
+          maxGrpcMessageSize);
     }
   }
 
@@ -144,6 +162,8 @@ public final class Cluster implements AutoCloseable {
   public final int memberPort;
   /** The unique id of this cluster member */
   public final ClusterMemberId clusterMemberId;
+  /** The maximum allowed message size over the cluster's GRPC mesh connections */
+  public final int maxGrpcMessageSize;
 
   private Cluster(
       String clusterName,
@@ -151,7 +171,8 @@ public final class Cluster implements AutoCloseable {
       String coordinatorHost,
       int coordinatorPort,
       Duration coordinatorLobbyTimeout,
-      int memberPort)
+      int memberPort,
+      int maxGrpcMessageSize)
       throws Exception {
     this.clusterName = clusterName;
     this.expectedClusterMembers = expectedClusterMembers;
@@ -160,6 +181,7 @@ public final class Cluster implements AutoCloseable {
     this.coordinatorLobbyTimeout = coordinatorLobbyTimeout;
     this.memberPort = memberPort;
     this.clusterMemberId = new ClusterMemberId();
+    this.maxGrpcMessageSize = maxGrpcMessageSize;
     this.clusterMember = new ClusterMember(this);
   }
 
@@ -201,6 +223,15 @@ public final class Cluster implements AutoCloseable {
       Supplier<T> supplyValueOnLeader, Serialiser<T> serialiser) {
     return clusterMember.synchroniseValueFromLeader(
         supplyValueOnLeader, serialiser, expectedClusterMembers);
+  }
+
+  public <T, IT extends Iterable<T>>
+      DistributedIterator<List<T>> waitAndReplicateToAllMembersInBatches(
+          int batchSize, Supplier<IT> supplyValuesOnLeader, Serialiser<T> serialiser) {
+    return new DistributedIterator<>(
+        this,
+        () -> Iterables.partition(supplyValuesOnLeader.get(), batchSize),
+        Serialisers.listEntries(serialiser));
   }
 
   /**

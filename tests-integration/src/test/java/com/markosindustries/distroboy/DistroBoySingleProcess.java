@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,17 +33,30 @@ public class DistroBoySingleProcess {
   }
 
   public static void run(final String jobName, final int workerThreads, Job job) throws Exception {
-    INSTANCE.runInternal(jobName, workerThreads, workerThreads, job);
+    INSTANCE.runInternal(jobName, workerThreads, workerThreads, Function.identity(), job);
+  }
+
+  public static void run(
+      final String jobName,
+      final int workerThreads,
+      final Function<Cluster.Builder, Cluster.Builder> configureCluster,
+      Job job)
+      throws Exception {
+    INSTANCE.runInternal(jobName, workerThreads, workerThreads, configureCluster, job);
   }
 
   public static void run(
       final String jobName, final int workerThreads, final int expectedWorkers, Job job)
       throws Exception {
-    INSTANCE.runInternal(jobName, workerThreads, expectedWorkers, job);
+    INSTANCE.runInternal(jobName, workerThreads, expectedWorkers, Function.identity(), job);
   }
 
   public void runInternal(
-      final String jobName, final int workerThreads, final int expectedWorkers, Job job) {
+      final String jobName,
+      final int workerThreads,
+      final int expectedWorkers,
+      final Function<Cluster.Builder, Cluster.Builder> configureCluster,
+      Job job) {
     final var executor =
         Executors.newFixedThreadPool(
             workerThreads,
@@ -64,7 +78,8 @@ public class DistroBoySingleProcess {
                         return CompletableFuture.runAsync(
                             () -> {
                               try (final var cluster =
-                                  Cluster.newBuilder(jobName, expectedWorkers)
+                                  configureCluster
+                                      .apply(Cluster.newBuilder(jobName, expectedWorkers))
                                       .coordinator("localhost", COORDINATOR_PORT)
                                       .memberPort(MEMBER_PORTS.getAndIncrement())
                                       .lobbyTimeout(Duration.ofSeconds(1))

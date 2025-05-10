@@ -58,6 +58,7 @@ public class ClusterMember implements AutoCloseable {
         ServerBuilder.forPort(cluster.memberPort)
             .addService(new ClusterMemberListener(cluster, clusterMemberState))
             .intercept(new ServerCallAddressInterceptor())
+            .maxInboundMessageSize(cluster.maxGrpcMessageSize)
             .build()
             .start();
 
@@ -76,7 +77,7 @@ public class ClusterMember implements AutoCloseable {
           cluster.clusterMemberId);
       this.members =
           clusterMembers.getClusterMembersList().stream()
-              .map(ConnectionToClusterMember::new)
+              .map(hostAndPort -> new ConnectionToClusterMember(hostAndPort, cluster))
               .toArray(ConnectionToClusterMember[]::new);
 
       log.debug("{} - connected to {} workers", cluster.clusterName, this.members.length);

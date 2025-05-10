@@ -1,6 +1,7 @@
 package com.markosindustries.distroboy.core.clustering;
 
 import com.google.protobuf.Empty;
+import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.schemas.ClusterMemberGrpc;
 import com.markosindustries.distroboy.schemas.ClusterMemberIdentity;
 import com.markosindustries.distroboy.schemas.DataReference;
@@ -32,12 +33,16 @@ class ConnectionToClusterMember implements AutoCloseable {
   private final ManagedChannel channel;
 
   /** Represents a connection to a cluster member */
-  ConnectionToClusterMember(HostAndPort hostAndPort) {
+  ConnectionToClusterMember(final HostAndPort hostAndPort, final Cluster cluster) {
     this.channel =
         ManagedChannelBuilder.forAddress(hostAndPort.getHost(), hostAndPort.getPort())
             .usePlaintext()
+            .maxInboundMessageSize(cluster.maxGrpcMessageSize)
             .build();
-    this.member = ClusterMemberGrpc.newBlockingStub(channel);
+    this.member =
+        ClusterMemberGrpc.newBlockingStub(channel)
+            .withMaxOutboundMessageSize(cluster.maxGrpcMessageSize)
+            .withMaxInboundMessageSize(cluster.maxGrpcMessageSize);
     this.hostAndPort = hostAndPort;
   }
 
