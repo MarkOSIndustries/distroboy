@@ -294,7 +294,11 @@ public class ClusterMemberListener extends ClusterMemberGrpc.ClusterMemberImplBa
       } while (!synchronisationPoint.countDownLatch.await(100, TimeUnit.MILLISECONDS));
 
       // This one is now done, pop it off the queue
-      clusterMemberState.synchronisationPoints.poll();
+      synchronized (clusterMemberState.synchronisationPointsLock) {
+        if (clusterMemberState.synchronisationPoints.remove(synchronisationPoint)) {
+          log.debug("Removed synchronisation point {}", synchronisationPoint.index);
+        }
+      }
 
       responseObserver.onNext(synchronisationPoint.getSynchronisedValue());
       responseObserver.onCompleted();
