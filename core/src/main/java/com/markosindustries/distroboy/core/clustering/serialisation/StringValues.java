@@ -5,12 +5,12 @@ import com.markosindustries.distroboy.schemas.Value;
 /** Default serialiser for {@link String}s */
 public class StringValues implements Serialiser<String> {
   @Override
-  public String deserialise(Value value) {
+  public String deserialise(Value value) throws Exception {
     return value.getStringValue();
   }
 
   @Override
-  public Value serialise(String value) {
+  public Value serialise(String value) throws Exception {
     return Value.newBuilder().setStringValue(value).build();
   }
 }

@@ -43,7 +43,8 @@ public class DistributableDataReference<I> {
    * @return An iterator of serialised {@link Value}s
    */
   IteratorWithResources<Value> getSerialisingIterator() {
-    return new MappingIteratorWithResources<>(iteratorSupplier.get(), serialiser::serialise);
+    return new MappingIteratorWithResources<>(
+        iteratorSupplier.get(), serialiser::serialiseUnchecked);
   }
 
   /**
@@ -72,7 +73,7 @@ public class DistributableDataReference<I> {
     }
 
     Value serialise() {
-      return serialiser.serialise(value);
+      return serialiser.serialiseUnchecked(value);
     }
   }
 }

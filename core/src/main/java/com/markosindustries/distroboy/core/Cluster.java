@@ -313,7 +313,7 @@ public final class Cluster implements AutoCloseable {
               final var sortRanges = new ArrayList<SortRange>(expectedClusterMembers);
               final var sortRangeBuilder = SortRange.newBuilder();
               for (final I rangeEnd : rangeEndsInclusive) {
-                final var rangeEndValue = serialiser.serialise(rangeEnd);
+                final var rangeEndValue = serialiser.serialiseUnchecked(rangeEnd);
                 sortRangeBuilder.setRangeEndInclusive(rangeEndValue);
                 sortRanges.add(sortRangeBuilder.build());
                 sortRangeBuilder.setRangeStartExclusive(rangeEndValue);
@@ -500,7 +500,7 @@ public final class Cluster implements AutoCloseable {
         dataSourceRange -> {
           final var iterator = opSequence.getOperand().enumerateRangeForNode(dataSourceRange);
           return new MappingIteratorWithResources<>(
-              iterator, opSequence.getSerialiser()::serialise);
+              iterator, opSequence.getSerialiser()::serialiseUnchecked);
         });
 
     if (!clusterMember.isLeader()) {

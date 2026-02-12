@@ -24,7 +24,7 @@ public class ProtobufValues<T extends MessageLite> implements Serialiser<T> {
   }
 
   @Override
-  public Value serialise(T value) {
+  public Value serialise(T value) throws Exception {
     return Value.newBuilder().setBytesValue(value.toByteString()).build();
   }
 }

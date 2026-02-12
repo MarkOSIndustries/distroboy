@@ -93,4 +93,15 @@ public interface Serialisers {
       ParseFromByteString<T> parseFromByteString) {
     return new ProtobufValues<>(parseFromByteString);
   }
+
+  /**
+   * Serialiser factory for Java records, using Java's inbuilt object serialisation functionality.
+   *
+   * @param recordClass The class of the Java record to be seralised
+   * @param <T> The Java record to be serialised
+   * @return A serialiser for the given protobuf type
+   */
+  static <T> JavaRecords<T> javaRecords(Class<T> recordClass) {
+    return new JavaRecords<T>();
+  }
 }

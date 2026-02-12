@@ -5,7 +5,7 @@ import com.markosindustries.distroboy.schemas.Value;
 /** Default serialiser for {@link Boolean}s */
 public class BooleanValues implements Serialiser<Boolean> {
   @Override
-  public Value serialise(Boolean value) {
+  public Value serialise(Boolean value) throws Exception {
     return Value.newBuilder().setBoolValue(value).build();
   }
 

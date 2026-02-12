@@ -27,7 +27,7 @@ public class MapSerialiser<K, V, M extends Map<K, V>> implements Serialiser<M> {
   }
 
   @Override
-  public Value serialise(M value) {
+  public Value serialise(M value) throws Exception {
     return Value.newBuilder()
         .setRepeatedValue(
             RepeatedValue.newBuilder()
@@ -36,8 +36,8 @@ public class MapSerialiser<K, V, M extends Map<K, V>> implements Serialiser<M> {
                         .flatMap(
                             v ->
                                 Stream.of(
-                                    keySerialiser.serialise(v.getKey()),
-                                    valueSerialiser.serialise(v.getValue())))
+                                    keySerialiser.serialiseUnchecked(v.getKey()),
+                                    valueSerialiser.serialiseUnchecked(v.getValue())))
                         .toList()))
         .build();
   }

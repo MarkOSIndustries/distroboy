@@ -5,7 +5,7 @@ import com.markosindustries.distroboy.schemas.Value;
 /** Default serialiser for {@link Double}s */
 public class DoubleValues implements Serialiser<Double> {
   @Override
-  public Value serialise(Double value) {
+  public Value serialise(Double value) throws Exception {
     return Value.newBuilder().setDoubleValue(value).build();
   }
 

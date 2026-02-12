@@ -18,8 +18,24 @@ public interface Serialiser<T> {
    *
    * @param value The object to serialise
    * @return A {@link Value} representation of the given object
+   * @throws Exception if serialisation fails
    */
-  Value serialise(T value);
+  Value serialise(T value) throws Exception;
+
+  /**
+   * Convert the given object to a {@link Value}, rethrowing exceptions as {@link RuntimeException}s
+   *
+   * @param value The object to serialise
+   * @return A {@link Value} representation of the given object
+   * @throws RuntimeException if serialisation fails
+   */
+  default Value serialiseUnchecked(T value) {
+    try {
+      return serialise(value);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   /**
    * Convert the given {@link Value} back to the expected object type
@@ -31,6 +47,22 @@ public interface Serialiser<T> {
   T deserialise(Value value) throws Exception;
 
   /**
+   * Convert the given {@link Value} back to the expected object type, rethrowing exceptions as
+   * {@link RuntimeException}s
+   *
+   * @param value The {@link Value} to deserialise
+   * @return The deserialised object
+   * @throws RuntimeException if deserialisation fails
+   */
+  default T deserialiseUnchecked(Value value) {
+    try {
+      return deserialise(value);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
    * Convenience method for converting an iterator of {@link Value}s to an iterator of objects by
    * deserialising each item
    *
@@ -38,15 +70,7 @@ public interface Serialiser<T> {
    * @return An {@link Iterator} of deserialised objects
    */
   default Iterator<T> deserialiseIterator(Iterator<Value> values) {
-    return new MappingIterator<>(
-        values,
-        value -> {
-          try {
-            return deserialise(value);
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
-        });
+    return new MappingIterator<>(values, this::deserialiseUnchecked);
   }
 
   /**
@@ -58,14 +82,6 @@ public interface Serialiser<T> {
    */
   default IteratorWithResources<T> deserialiseIteratorWithResources(
       IteratorWithResources<Value> values) {
-    return new MappingIteratorWithResources<>(
-        values,
-        value -> {
-          try {
-            return deserialise(value);
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
-        });
+    return new MappingIteratorWithResources<>(values, this::deserialiseUnchecked);
   }
 }

@@ -23,7 +23,7 @@ public class MapEntries<K, V> implements Serialiser<Map.Entry<K, V>> {
   }
 
   @Override
-  public Value serialise(Map.Entry<K, V> value) {
+  public Value serialise(Map.Entry<K, V> value) throws Exception {
     return Value.newBuilder()
         .setRepeatedValue(
             RepeatedValue.newBuilder()

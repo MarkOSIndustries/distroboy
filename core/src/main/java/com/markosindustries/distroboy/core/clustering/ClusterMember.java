@@ -83,10 +83,7 @@ public class ClusterMember implements AutoCloseable {
       log.debug("{} - connected to {} workers", cluster.clusterName, this.members.length);
       this.memberIdentities =
           Arrays.stream(members)
-              .collect(
-                  toUnmodifiableMap(
-                      worker -> ClusterMemberId.fromBytes(worker.identify().getNodeId()),
-                      Function.identity()));
+              .collect(toUnmodifiableMap(ConnectionToClusterMember::memberId, Function.identity()));
     } catch (Throwable t) {
       memberServer.shutdown();
       throw t;
@@ -219,11 +216,7 @@ public class ClusterMember implements AutoCloseable {
     for (final ConnectionToClusterMember member : members) {
       final Optional<Value> synchronisedValue = member.synchronise(index);
       if (synchronisedValue.isPresent()) {
-        try {
-          return valueSerialiser.deserialise(synchronisedValue.get());
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+        return valueSerialiser.deserialiseUnchecked(synchronisedValue.get());
       }
     }
 

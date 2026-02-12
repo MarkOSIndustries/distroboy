@@ -3,7 +3,6 @@ package com.markosindustries.distroboy.core.clustering;
 import com.google.protobuf.Empty;
 import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.schemas.ClusterMemberGrpc;
-import com.markosindustries.distroboy.schemas.ClusterMemberIdentity;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceHashSpec;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
@@ -31,6 +30,7 @@ class ConnectionToClusterMember implements AutoCloseable {
   private final ClusterMemberGrpc.ClusterMemberBlockingStub member;
   private final HostAndPort hostAndPort;
   private final ManagedChannel channel;
+  private final ClusterMemberId memberId;
 
   /** Represents a connection to a cluster member */
   ConnectionToClusterMember(final HostAndPort hostAndPort, final Cluster cluster) {
@@ -44,10 +44,12 @@ class ConnectionToClusterMember implements AutoCloseable {
             .withMaxOutboundMessageSize(cluster.maxGrpcMessageSize)
             .withMaxInboundMessageSize(cluster.maxGrpcMessageSize);
     this.hostAndPort = hostAndPort;
+    this.memberId =
+        ClusterMemberId.fromBytes(member.identify(Empty.newBuilder().build()).getNodeId());
   }
 
-  public ClusterMemberIdentity identify() {
-    return member.identify(Empty.newBuilder().build());
+  public ClusterMemberId memberId() {
+    return memberId;
   }
 
   public Iterator<Value> process(DataSourceRange dataSourceRange) {
@@ -101,14 +103,16 @@ class ConnectionToClusterMember implements AutoCloseable {
   public void close() throws Exception {
     channel.shutdown();
     while (!channel.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-      log.debug("Awaiting shutdown of channel to Cluster peer");
+      log.debug("Awaiting shutdown of channel to Cluster peer {}", memberId);
     }
   }
 
   @Override
   public String toString() {
     return "ConnectionToClusterMember{"
-        + "host="
+        + "memberId="
+        + memberId
+        + ", host="
         + hostAndPort.getHost()
         + ", port="
         + hostAndPort.getPort()

@@ -54,7 +54,7 @@ class ClusterMemberState {
         final Serialiser<T> valueSerialiser,
         final int expectedSynchroniseCount) {
       this.index = index;
-      supplyValue = () -> valueSerialiser.serialise(valueSupplier.get());
+      supplyValue = () -> valueSerialiser.serialiseUnchecked(valueSupplier.get());
       countDownLatch = new CountDownLatch(expectedSynchroniseCount);
     }
 
@@ -127,13 +127,9 @@ class ClusterMemberState {
 
     @Override
     public boolean enter(final SortRangeRetriever member) {
-      try {
-        retrieversByRangeEndInclusive.put(
-            serialiser.deserialise(member.sortRange.getRangeEndInclusive()), member);
-        return retrieversByRangeEndInclusive.size() == expectedRetrieveCount;
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      retrieversByRangeEndInclusive.put(
+          serialiser.deserialiseUnchecked(member.sortRange.getRangeEndInclusive()), member);
+      return retrieversByRangeEndInclusive.size() == expectedRetrieveCount;
     }
 
     @SuppressWarnings("unchecked")

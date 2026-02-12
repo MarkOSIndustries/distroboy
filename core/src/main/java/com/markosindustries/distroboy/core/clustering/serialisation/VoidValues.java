@@ -5,7 +5,7 @@ import com.markosindustries.distroboy.schemas.Value;
 /** Default serialiser for {@link Void}s */
 public class VoidValues implements Serialiser<Void> {
   @Override
-  public Value serialise(Void value) {
+  public Value serialise(Void value) throws Exception {
     return Value.getDefaultInstance();
   }
 

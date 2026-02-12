@@ -6,7 +6,7 @@ import com.markosindustries.distroboy.schemas.Value;
 /** Default serialiser for byte arrays */
 public class ByteStringValues implements Serialiser<ByteString> {
   @Override
-  public Value serialise(ByteString value) {
+  public Value serialise(ByteString value) throws Exception {
     return Value.newBuilder().setBytesValue(value).build();
   }
 

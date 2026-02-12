@@ -5,7 +5,7 @@ import com.markosindustries.distroboy.schemas.Value;
 /** Default serialiser for {@link Float}s */
 public class FloatValues implements Serialiser<Float> {
   @Override
-  public Value serialise(Float value) {
+  public Value serialise(Float value) throws Exception {
     return Value.newBuilder().setFloatValue(value).build();
   }
 

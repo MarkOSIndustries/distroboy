@@ -4,7 +4,6 @@ import com.markosindustries.distroboy.schemas.RepeatedValue;
 import com.markosindustries.distroboy.schemas.Value;
 import java.util.Collection;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /** Default serialiser for {@link Collection}s */
 public class CollectionValues<T, C extends Collection<T>> implements Serialiser<C> {
@@ -27,10 +26,7 @@ public class CollectionValues<T, C extends Collection<T>> implements Serialiser<
     return Value.newBuilder()
         .setRepeatedValue(
             RepeatedValue.newBuilder()
-                .addAllValues(
-                    value.stream()
-                        .map(serialiser::serialise)
-                        .collect(Collectors.toUnmodifiableList()))
+                .addAllValues(value.stream().map(serialiser::serialiseUnchecked).toList())
                 .build())
         .build();
   }

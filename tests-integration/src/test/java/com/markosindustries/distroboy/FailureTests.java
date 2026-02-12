@@ -102,7 +102,7 @@ public class FailureTests {
                         modulo,
                         new IntegerValues() {
                           @Override
-                          public Value serialise(final Integer value) {
+                          public Value serialise(final Integer value) throws Exception {
                             if (cluster.isLeader()) {
                               throw new RuntimeException("I am dying on purpose");
                             }
@@ -165,7 +165,7 @@ public class FailureTests {
                         comparator,
                         new IntegerValues() {
                           @Override
-                          public Value serialise(final Integer value) {
+                          public Value serialise(final Integer value) throws Exception {
                             if (cluster.isLeader()) {
                               throw new RuntimeException("I am dying on purpose");
                             }
