@@ -13,6 +13,7 @@ import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
 import com.markosindustries.distroboy.logback.Logging;
 import com.markosindustries.distroboy.schemas.Value;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -140,6 +141,7 @@ public class FailureTests {
   }
 
   @Test
+  @SuppressFBWarnings("DE_MIGHT_IGNORE")
   public void terminatesClusterWhenNonLeaderNodesThrowDuringSort() throws Exception {
     try {
       final Comparator<Integer> comparator = Integer::compare;

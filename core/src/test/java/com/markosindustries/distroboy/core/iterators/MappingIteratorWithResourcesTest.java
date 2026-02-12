@@ -56,9 +56,9 @@ public class MappingIteratorWithResourcesTest {
     final var wrapped = IteratorWithResources.from(list.iterator(), resource);
     final var mappingIterator = new MappingIteratorWithResources<>(wrapped, Function.identity());
 
-    Assertions.assertFalse(resource.isClosed);
+    Assertions.assertFalse(resource.isClosed());
     mappingIterator.close();
-    Assertions.assertTrue(resource.isClosed);
+    Assertions.assertTrue(resource.isClosed());
   }
 
   @Test
@@ -70,12 +70,12 @@ public class MappingIteratorWithResourcesTest {
         new MappingIteratorWithResources<>(
             IteratorWithResources.from(list.iterator()), Function.identity(), resources);
 
-    Assertions.assertFalse(resources.get(0).isClosed);
-    Assertions.assertFalse(resources.get(1).isClosed);
+    Assertions.assertFalse(resources.get(0).isClosed());
+    Assertions.assertFalse(resources.get(1).isClosed());
 
     IteratorTo.list(mappingIterator);
 
-    Assertions.assertTrue(resources.get(0).isClosed);
-    Assertions.assertTrue(resources.get(1).isClosed);
+    Assertions.assertTrue(resources.get(0).isClosed());
+    Assertions.assertTrue(resources.get(1).isClosed());
   }
 }

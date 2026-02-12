@@ -76,9 +76,9 @@ public class FlatMappingIteratorWithResourcesTest {
     final var flatMappingIterator =
         new FlatMappingIteratorWithResources<>(wrapped, Function.identity());
 
-    Assertions.assertFalse(wrappedResource.isClosed);
+    Assertions.assertFalse(wrappedResource.isClosed());
     flatMappingIterator.close();
-    Assertions.assertTrue(wrappedResource.isClosed);
+    Assertions.assertTrue(wrappedResource.isClosed());
   }
 
   @Test
@@ -94,12 +94,12 @@ public class FlatMappingIteratorWithResourcesTest {
     final var flatMappingIterator =
         new FlatMappingIteratorWithResources<>(wrapped, Function.identity());
 
-    Assertions.assertFalse(resource1.isClosed);
-    Assertions.assertFalse(resource2.isClosed);
+    Assertions.assertFalse(resource1.isClosed());
+    Assertions.assertFalse(resource2.isClosed());
     while (flatMappingIterator.hasNext()) {
       flatMappingIterator.next();
     }
-    Assertions.assertTrue(resource1.isClosed);
-    Assertions.assertTrue(resource2.isClosed);
+    Assertions.assertTrue(resource1.isClosed());
+    Assertions.assertTrue(resource2.isClosed());
   }
 }

@@ -11,4 +11,8 @@
     <!-- These typically don't play nicely with composing mutable objects together -->
     <Bug pattern="EI_EXPOSE_REP2" />
   </Match>
+  <Match>
+    <!-- I like being able to validate in constructors -->
+    <Bug pattern="CT_CONSTRUCTOR_THROW" />
+  </Match>
 </FindBugsFilter>

@@ -5,9 +5,15 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import org.apache.parquet.io.SeekableInputStream;
 
+/** A {@link SeekableInputStream} backed by a File */
 public class FileBasedSeekableInputStream extends SeekableInputStream {
   private final RandomAccessFile file;
 
+  /**
+   * A {@link SeekableInputStream} backed by a File
+   *
+   * @param file The file
+   */
   public FileBasedSeekableInputStream(RandomAccessFile file) {
     this.file = file;
   }

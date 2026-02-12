@@ -7,6 +7,9 @@ package com.markosindustries.distroboy.core;
  * @param <T> The type of the operation result
  */
 public interface AsyncDistributedOpResult<T> extends DistributedOpResult<T> {
+  /**
+   * @see Cluster#waitForAllMembers
+   */
   default DistributedOpResult<T> waitForAllMembers(Cluster cluster) {
     cluster.waitForAllMembers();
     return this;

@@ -88,8 +88,8 @@ public class SparseIteratorWithResourcesTest {
     final var wrapped = IteratorWithResources.from(list.iterator(), resource);
     final var sparseIterator = new SparseIteratorWithResources<>(wrapped, 0, 1);
 
-    Assertions.assertFalse(resource.isClosed);
+    Assertions.assertFalse(resource.isClosed());
     sparseIterator.close();
-    Assertions.assertTrue(resource.isClosed);
+    Assertions.assertTrue(resource.isClosed());
   }
 }
