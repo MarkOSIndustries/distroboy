@@ -1,8 +1,27 @@
-subprojects {
-    group 'com.markosindustries.distroboy'
-    version "${version_string}"
+plugins {
+  id 'com.gradleup.nmcp.aggregation' version '1.4.4'
+}
 
-    repositories {
-        mavenCentral()
-    }
+allprojects {
+  repositories {
+    mavenCentral()
+  }
+}
+
+subprojects {
+  group 'com.markosindustries.distroboy'
+  version "${version_string}"
+}
+
+nmcpAggregation {
+  centralPortal {
+    username = System.getenv("OSSRH_USERNAME")
+    password = System.getenv("OSSRH_PASSWORD")
+  }
+}
+
+dependencies {
+  subprojects {
+    nmcpAggregation(project(path))
+  }
 }

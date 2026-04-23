@@ -10,4 +10,4 @@ echo "Using VERSION string ${VERSION}"
   -Psigning.secretKeyRingFile=/secrets/.gnupg/secring.gpg \
   -Psigning.keyId="${GPG_KEYID}" \
   -Psigning.password="${GPG_PASSWORD}" \
-  publishAllPublicationsToOSSRHRepository
+  publishAggregationToCentralPortal
