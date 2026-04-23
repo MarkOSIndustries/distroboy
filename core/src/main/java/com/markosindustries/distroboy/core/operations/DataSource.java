@@ -17,9 +17,9 @@ import java.util.List;
  *   <li>we can load a requested index range of the data
  * </ul>
  *
- * @param <I> The type of items in the data source
+ * @param <Input> The type of items in the data source
  */
-public interface DataSource<I> extends Operand<I, List<I>> {
+public interface DataSource<Input> extends Operand<Input, List<Input>> {
   /**
    * Determine the number of values in this data source. <b>IMPORTANT:</b> Must be consistent when
    * called from each cluster member.
@@ -37,7 +37,7 @@ public interface DataSource<I> extends Operand<I, List<I>> {
    * @param endExclusive The end of the range (exclusive - the value at this index will be omitted)
    * @return An iterator providing values in the specified range
    */
-  IteratorWithResources<I> enumerateRangeOfFullSet(
+  IteratorWithResources<Input> enumerateRangeOfFullSet(
       final long startInclusive, final long endExclusive);
 
   /**
@@ -57,7 +57,8 @@ public interface DataSource<I> extends Operand<I, List<I>> {
    * @param dataSourceRange The range of values to enumerate
    * @return An iterator providing values in the specified range
    */
-  default IteratorWithResources<I> enumerateRangeForNode(final DataSourceRange dataSourceRange) {
+  default IteratorWithResources<Input> enumerateRangeForNode(
+      final DataSourceRange dataSourceRange) {
     return enumerateRangeOfFullSet(
         dataSourceRange.getStartInclusive(), dataSourceRange.getEndExclusive());
   }
@@ -73,7 +74,7 @@ public interface DataSource<I> extends Operand<I, List<I>> {
    * @return A list containing the elements in the {@link DataSource}
    */
   @Override
-  default List<I> collect(final Iterator<I> results) {
+  default List<Input> collect(final Iterator<Input> results) {
     return IteratorTo.list(results);
   }
 }

@@ -8,18 +8,18 @@ import java.util.Iterator;
  * {@link #forEach} loop on each node against its local fragment of the data set. If you need to
  * then run more operations or collect some aggregate from each node, use {@link MapOp} instead.
  *
- * @param <I> The type of the input data set items
+ * @param <Input> The type of the input data set items
  */
-public interface ForEachOp<I> extends Operation<I, Void, Void> {
+public interface ForEachOp<Input> extends Operation<Input, Void, Void> {
   /**
    * Do something with the given value
    *
    * @param input The value to perform some action with
    */
-  void forEach(I input);
+  void forEach(Input input);
 
   @Override
-  default IteratorWithResources<Void> apply(IteratorWithResources<I> input) throws Exception {
+  default IteratorWithResources<Void> apply(IteratorWithResources<Input> input) throws Exception {
     while (input.hasNext()) {
       forEach(input.next());
     }

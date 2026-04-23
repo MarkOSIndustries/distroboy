@@ -8,33 +8,35 @@ import java.util.function.Supplier;
  * provided collection constructor. If collected after this stage, the results on the leader node
  * will also use the specified collection type and constructor.
  *
- * @param <I> The input data type
- * @param <C> The collection type
+ * @param <Input> The input data type
+ * @param <CollectionType> The collection type
  */
-public class ReduceToCollection<I, C extends Collection<I>> implements ReduceOp<I, C> {
-  private final Supplier<C> newCollection;
+public class ReduceToCollection<Input, CollectionType extends Collection<Input>>
+    implements ReduceOp<Input, CollectionType> {
+  private final Supplier<CollectionType> newCollection;
 
   /**
    * @see ReduceToCollection
    * @param newCollection The constructor to create an empty collection
    */
-  public ReduceToCollection(Supplier<C> newCollection) {
+  public ReduceToCollection(Supplier<CollectionType> newCollection) {
     this.newCollection = newCollection;
   }
 
   @Override
-  public C initAggregate() {
+  public CollectionType initAggregate() {
     return newCollection.get();
   }
 
   @Override
-  public C reduceInput(final C aggregate, final I input) throws Exception {
+  public CollectionType reduceInput(final CollectionType aggregate, final Input input)
+      throws Exception {
     aggregate.add(input);
     return aggregate;
   }
 
   @Override
-  public C reduceOutput(final C aggregate, final C result) {
+  public CollectionType reduceOutput(final CollectionType aggregate, final CollectionType result) {
     aggregate.addAll(result);
     return aggregate;
   }

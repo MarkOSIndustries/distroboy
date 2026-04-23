@@ -241,15 +241,15 @@ public final class Cluster implements AutoCloseable {
    * @see com.markosindustries.distroboy.core.operations.PersistToHeap
    * @param referenceId The identifier of the reference
    * @param distributableDataReference A distributable reference to some data
-   * @param <I> The type of values contained in the referenced data
+   * @param <T> The type of values contained in the referenced data
    */
-  public <I> void addDistributableData(
-      DataReferenceId referenceId, DistributableDataReference<I> distributableDataReference) {
+  public <T> void addDistributableData(
+      DataReferenceId referenceId, DistributableDataReference<T> distributableDataReference) {
     clusterMember.addDistributableData(referenceId, distributableDataReference);
   }
 
-  private <I, O> List<DataReference> distributeReferencesRaw(
-      DistributedOpSequence<I, DataReference, ? extends DataReferenceList<O>> opSequence)
+  private <Input, Output> List<DataReference> distributeReferencesRaw(
+      DistributedOpSequence<Input, DataReference, ? extends DataReferenceList<Output>> opSequence)
       throws InterruptedException {
     final var dataReferencesResult = executeAsync(opSequence);
 
@@ -268,10 +268,10 @@ public final class Cluster implements AutoCloseable {
     return clusterMember.awaitDistributedDataReferences();
   }
 
-  public <I> DistributedOpSequence.Builder<SortRange, I, List<I>> redistributeOrderingBy(
-      SortedDataReferenceList<I> dataReferences,
-      Comparator<I> comparator,
-      Serialiser<I> serialiser) {
+  public <T> DistributedOpSequence.Builder<SortRange, T, List<T>> redistributeOrderingBy(
+      SortedDataReferenceList<T> dataReferences,
+      Comparator<T> comparator,
+      Serialiser<T> serialiser) {
     final var dataReferencesForSelf =
         dataReferences.list().stream()
             .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
@@ -283,7 +283,7 @@ public final class Cluster implements AutoCloseable {
     // Step 2 - Each data set collects N equidistant samples of its data, where N is node count
     for (final DataReference dataReference : dataReferencesForSelf) {
       clusterMember.takeSortSamples(dataReference, expectedClusterMembers);
-      clusterMember.<I>pushComparator(
+      clusterMember.<T>pushComparator(
           dataReference, comparator, serialiser, expectedClusterMembers);
     }
 
@@ -311,7 +311,7 @@ public final class Cluster implements AutoCloseable {
 
               final var sortRanges = new ArrayList<SortRange>(expectedClusterMembers);
               final var sortRangeBuilder = SortRange.newBuilder();
-              for (final I rangeEnd : rangeEndsInclusive) {
+              for (final T rangeEnd : rangeEndsInclusive) {
                 final var rangeEndValue = serialiser.serialiseUnchecked(rangeEnd);
                 sortRangeBuilder.setRangeEndInclusive(rangeEndValue);
                 sortRanges.add(sortRangeBuilder.build());
@@ -348,15 +348,15 @@ public final class Cluster implements AutoCloseable {
    * guaranteed to be stored, reiterable, or countable. For that, use {@link #persist}
    *
    * @param opSequence The set of operations to be performed before persisting the data
-   * @param <I> The input type
-   * @param <O> The output type
+   * @param <Input> The input type
+   * @param <Output> The output type
    * @return A list of references to the persisted data
    * @throws InterruptedException If interrupted while waiting for all references to be collected
    */
-  public <I, O> DataReferenceList<O> distributeReferences(
-      DistributedOpSequence<I, DataReference, DataReferenceList<O>> opSequence)
+  public <Input, Output> DataReferenceList<Output> distributeReferences(
+      DistributedOpSequence<Input, DataReference, DataReferenceList<Output>> opSequence)
       throws InterruptedException {
-    return new DataReferenceList<O>(distributeReferencesRaw(opSequence));
+    return new DataReferenceList<Output>(distributeReferencesRaw(opSequence));
   }
 
   /**
@@ -366,15 +366,15 @@ public final class Cluster implements AutoCloseable {
    * #fromPersistedData}, for example.
    *
    * @param opSequence The set of operations to be performed before persisting the data
-   * @param <I> The input type
-   * @param <O> The output type
+   * @param <Input> The input type
+   * @param <Output> The output type
    * @return A list of references to the persisted data
    * @throws InterruptedException If interrupted while waiting for all references to be collected
    */
-  public <I, O> PersistedDataReferenceList<O> persist(
-      DistributedOpSequence<I, DataReference, PersistedDataReferenceList<O>> opSequence)
+  public <Input, Output> PersistedDataReferenceList<Output> persist(
+      DistributedOpSequence<Input, DataReference, PersistedDataReferenceList<Output>> opSequence)
       throws InterruptedException {
-    return new PersistedDataReferenceList<O>(distributeReferencesRaw(opSequence));
+    return new PersistedDataReferenceList<Output>(distributeReferencesRaw(opSequence));
   }
 
   /**
@@ -384,15 +384,15 @@ public final class Cluster implements AutoCloseable {
    * {@link #fromPersistedData}, for example.
    *
    * @param opSequence The set of operations to be performed before persisting the data
-   * @param <I> The input type
-   * @param <O> The output type
+   * @param <Input> The input type
+   * @param <Output> The output type
    * @return A list of references to the persisted data
    * @throws InterruptedException If interrupted while waiting for all references to be collected
    */
-  public <I, O> SortedDataReferenceList<O> persistAndSort(
-      DistributedOpSequence<I, DataReference, SortedDataReferenceList<O>> opSequence)
+  public <Input, Output> SortedDataReferenceList<Output> persistAndSort(
+      DistributedOpSequence<Input, DataReference, SortedDataReferenceList<Output>> opSequence)
       throws InterruptedException {
-    return new SortedDataReferenceList<O>(distributeReferencesRaw(opSequence));
+    return new SortedDataReferenceList<Output>(distributeReferencesRaw(opSequence));
   }
 
   /**
@@ -405,11 +405,11 @@ public final class Cluster implements AutoCloseable {
    * #redistributeEqually}
    *
    * @param dataReferences The references to the persisted data
-   * @param <I> The persisted data type
+   * @param <T> The persisted data type
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
-  public <I> DistributedOpSequence.Builder<I, I, List<I>> fromPersistedData(
-      PersistedDataReferenceList<I> dataReferences) {
+  public <T> DistributedOpSequence.Builder<T, T, List<T>> fromPersistedData(
+      PersistedDataReferenceList<T> dataReferences) {
     return DistributedOpSequence.readFrom(
         new LocallyPersistedDataSource<>(this.clusterMember, dataReferences));
   }
@@ -420,12 +420,12 @@ public final class Cluster implements AutoCloseable {
    *
    * @param dataReferences The references to the data to redistribute
    * @param serialiser A serialiser for the data types persisted
-   * @param <I> The persisted data type
+   * @param <T> The persisted data type
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
-  public <I> DistributedOpSequence.Builder<DataReferenceRange, I, List<I>> redistributeEqually(
-      PersistedDataReferenceList<I> dataReferences, Serialiser<I> serialiser) {
-    return DistributedOpSequence.readFrom(new EvenlyRedistributedDataSource<I>(dataReferences))
+  public <T> DistributedOpSequence.Builder<DataReferenceRange, T, List<T>> redistributeEqually(
+      PersistedDataReferenceList<T> dataReferences, Serialiser<T> serialiser) {
+    return DistributedOpSequence.readFrom(new EvenlyRedistributedDataSource<T>(dataReferences))
         .flatMap(
             dataReference -> IteratorWithResources.from(retrieveRange(dataReference, serialiser)));
   }
@@ -436,23 +436,23 @@ public final class Cluster implements AutoCloseable {
    * will be processed on a single node.
    *
    * @param dataReferences The references to the data to redistribute
-   * @param classifier Given an input I, returns some object H which will be hashed
-   * @param hasher A function which takes the output H of the classifier, and hashes it to a number
-   *     in Integer space
+   * @param classifier Given an input I, returns some object Key which will be hashed
+   * @param hasher A function which takes the output Key of the classifier, and hashes it to a
+   *     number in Integer space
    * @param partitions The number of partitions desired (ie: the modulus to use for the hashes)
    * @param serialiser A serialiser for the data types persisted
-   * @param <I> The persisted data type
-   * @param <H> The type the classifier will return for generating hashes
+   * @param <Input> The persisted data type
+   * @param <Key> The type the classifier will return for generating hashes
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
-  public <I, H>
-      DistributedOpSequence.IteratorBuilder<Integer, I, Iterator<I>, List<Iterator<I>>>
+  public <Input, Key>
+      DistributedOpSequence.IteratorBuilder<Integer, Input, Iterator<Input>, List<Iterator<Input>>>
           redistributeByHash(
-              DataReferenceList<I> dataReferences,
-              Function<I, H> classifier,
-              Function<H, Integer> hasher,
+              DataReferenceList<Input> dataReferences,
+              Function<Input, Key> classifier,
+              Function<Key, Integer> hasher,
               int partitions,
-              Serialiser<I> serialiser) {
+              Serialiser<Input> serialiser) {
     // We're expecting a bunch of calls to ask for this data classified.
     // We know how many, and we know which ones are for this member
     final var dataReferencesForSelf =
@@ -460,7 +460,7 @@ public final class Cluster implements AutoCloseable {
             .filter(ref -> clusterMemberId.equals(ClusterMemberId.fromBytes(ref.getMemberId())))
             .toList();
     for (final var dataReference : dataReferencesForSelf) {
-      clusterMember.<I>pushHasher(
+      clusterMember.<Input>pushHasher(
           dataReference, x -> hasher.apply(classifier.apply(x)), partitions);
     }
 
@@ -469,7 +469,7 @@ public final class Cluster implements AutoCloseable {
     return DistributedOpSequence.readFrom(hashesSource) // start with a hash value per node
         .mapToIterators(
             hash ->
-                (Iterator<I>)
+                (Iterator<Input>)
                     IteratorWithResources.from(
                         retrieveByHash(dataReferences.list(), hash, partitions, serialiser)))
         .materialise(); // important that we materialise, otherwise not all GRPC retrieveByHash
@@ -481,21 +481,22 @@ public final class Cluster implements AutoCloseable {
    * operation as the first operation on the newly generated DistributedOpSequence
    *
    * @param dataReferences The references to the data to redistribute
-   * @param classifier Given an input I, returns a grouping key K, which will be hashed
-   * @param hasher A function which takes the grouping key K, and hashes it to a number in Integer
+   * @param classifier Given an input I, returns a grouping Key, which will be hashed
+   * @param hasher A function which takes the grouping Key, and hashes it to a number in Integer
    *     space
    * @param partitions The number of partitions desired (ie: the modulus to use for the hashes)
    * @param serialiser A serialiser for the data types persisted
-   * @param <I> The persisted data type
-   * @param <K> The type of the key to group by (and which will be hashed for redistribution)
+   * @param <Input> The persisted data type
+   * @param <Key> The type of the key to group by (and which will be hashed for redistribution)
    * @return A new DistributedOpSequence whose DataSource is the persisted data
    */
-  public <I, K> DistributedOpSequence.HashMapBuilder<Integer, K, List<I>> redistributeAndGroupBy(
-      DataReferenceList<I> dataReferences,
-      Function<I, K> classifier,
-      Function<K, Integer> hasher,
-      int partitions,
-      Serialiser<I> serialiser) {
+  public <Input, Key>
+      DistributedOpSequence.HashMapBuilder<Integer, Key, List<Input>> redistributeAndGroupBy(
+          DataReferenceList<Input> dataReferences,
+          Function<Input, Key> classifier,
+          Function<Key, Integer> hasher,
+          int partitions,
+          Serialiser<Input> serialiser) {
     return redistributeByHash(dataReferences, classifier, hasher, partitions, serialiser)
         .groupBy(classifier::apply);
   }
@@ -512,13 +513,13 @@ public final class Cluster implements AutoCloseable {
    * eventually asked to perform the operation sequence.
    *
    * @param opSequence The DistributedOpSequence the cluster of nodes should execute
-   * @param <I> The input type of the operation sequence
-   * @param <O> The output type of the operation sequence
-   * @param <C> The collection type of the operation sequence.
+   * @param <Input> The input type of the operation sequence
+   * @param <Output> The output type of the operation sequence
+   * @param <CollectedOutput> The collection type of the operation sequence.
    * @return The DistributedOpResult (which contains the collected results on the leader node)
    */
-  public <I, O, C> AsyncDistributedOpResult<C> executeAsync(
-      DistributedOpSequence<I, O, C> opSequence) {
+  public <Input, Output, CollectedOutput> AsyncDistributedOpResult<CollectedOutput> executeAsync(
+      DistributedOpSequence<Input, Output, CollectedOutput> opSequence) {
     clusterMember.addJob(
         dataSourceRange -> {
           final var iterator = opSequence.getOperand().enumerateRangeForNode(dataSourceRange);
@@ -549,25 +550,26 @@ public final class Cluster implements AutoCloseable {
    * members will block here until the results have been collected on the leader.
    *
    * @param opSequence The DistributedOpSequence the cluster of nodes should execute
-   * @param <I> The input type of the operation sequence
-   * @param <O> The output type of the operation sequence
-   * @param <C> The collection type of the operation sequence.
+   * @param <Input> The input type of the operation sequence
+   * @param <Output> The output type of the operation sequence
+   * @param <CollectedOutput> The collection type of the operation sequence.
    * @return The DistributedOpResult (which contains the collected results on the leader node)
    */
-  public <I, O, C> DistributedOpResult<C> execute(DistributedOpSequence<I, O, C> opSequence) {
+  public <Input, Output, CollectedOutput> DistributedOpResult<CollectedOutput> execute(
+      DistributedOpSequence<Input, Output, CollectedOutput> opSequence) {
     return executeAsync(opSequence).waitForAllMembers(this);
   }
 
-  private <O> Iterator<O> retrieveRange(
-      DataReferenceRange dataReferenceRange, Serialiser<O> serialiser) {
+  private <T> Iterator<T> retrieveRange(
+      DataReferenceRange dataReferenceRange, Serialiser<T> serialiser) {
     return serialiser.deserialiseIterator(
         clusterMember.retrieveRangeFromMember(
             ClusterMemberId.fromBytes(dataReferenceRange.getReference().getMemberId()),
             dataReferenceRange));
   }
 
-  private <O> Iterator<O> retrieveByHash(
-      List<DataReference> dataReferences, int hash, int modulo, Serialiser<O> serialiser) {
+  private <T> Iterator<T> retrieveByHash(
+      List<DataReference> dataReferences, int hash, int modulo, Serialiser<T> serialiser) {
     // We materialise all of the GRPC iterators  up front so that each receiving cluster member
     // can iterate and hash a data reference exactly once, distributing based on hash%modulo
     final var valueIteratorsByMember =

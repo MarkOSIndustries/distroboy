@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.function.Function;
 
-public class ParquetProtobufFilesWriterStrategy<I extends Message>
-    extends ParquetFilesWriteStrategy<I> {
-  public ParquetProtobufFilesWriterStrategy(Function<I, Path> pathProvider, Class<I> rowClass) {
+public class ParquetProtobufFilesWriterStrategy<T extends Message>
+    extends ParquetFilesWriteStrategy<T> {
+  public ParquetProtobufFilesWriterStrategy(Function<T, Path> pathProvider, Class<T> rowClass) {
     super(
         pathProvider,
         (path) -> {

@@ -9,20 +9,20 @@ import java.util.Iterator;
  * item in it via the given {@link #flatMap} function into an {@link Iterator}. The resulting
  * iterators will be flattened into one large {@link Iterator}.
  *
- * @param <I> The type of the input data set items
- * @param <O> The type of the output data set items
+ * @param <Input> The type of the input data set items
+ * @param <Output> The type of the output data set items
  */
-public interface FlatMapOp<I, O> extends ListOp<I, O> {
+public interface FlatMapOp<Input, Output> extends ListOp<Input, Output> {
   /**
    * Given some input, produce an {@link Iterator} of outputs
    *
    * @param input The value to derive multiple outputs for
    * @return An {@link Iterator} of outputs
    */
-  Iterator<O> flatMap(I input);
+  Iterator<Output> flatMap(Input input);
 
   @Override
-  default IteratorWithResources<O> apply(IteratorWithResources<I> input) throws Exception {
+  default IteratorWithResources<Output> apply(IteratorWithResources<Input> input) throws Exception {
     return new FlatMappingIteratorWithResources<>(input, this::flatMap);
   }
 }

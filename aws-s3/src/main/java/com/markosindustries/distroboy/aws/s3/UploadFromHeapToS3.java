@@ -5,17 +5,17 @@ import java.util.function.Function;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 
-public class UploadFromHeapToS3<I> implements ForEachOp<I> {
+public class UploadFromHeapToS3<Input> implements ForEachOp<Input> {
   private final S3Client s3Client;
   private final String bucket;
-  private final Function<I, String> keyAccessor;
-  private final Function<I, byte[]> bytesAccessor;
+  private final Function<Input, String> keyAccessor;
+  private final Function<Input, byte[]> bytesAccessor;
 
   public UploadFromHeapToS3(
       S3Client s3Client,
       String bucket,
-      Function<I, String> keyAccessor,
-      Function<I, byte[]> bytesAccessor) {
+      Function<Input, String> keyAccessor,
+      Function<Input, byte[]> bytesAccessor) {
     this.s3Client = s3Client;
     this.bucket = bucket;
     this.keyAccessor = keyAccessor;
@@ -23,7 +23,7 @@ public class UploadFromHeapToS3<I> implements ForEachOp<I> {
   }
 
   @Override
-  public void forEach(I input) {
+  public void forEach(Input input) {
     String key = keyAccessor.apply(input);
     byte[] bytes = bytesAccessor.apply(input);
     s3Client.putObject(req -> req.bucket(bucket).key(key), RequestBody.fromBytes(bytes));

@@ -9,13 +9,13 @@ import java.util.function.Function;
  * An iterator which will take elements in the wrapped iterator and apply a flatmap operation to
  * them
  *
- * @param <I> The type of elements in the input {@link Iterator}
- * @param <O> The type of elements in the output {@link Iterator}
+ * @param <Input> The type of elements in the input {@link Iterator}
+ * @param <Output> The type of elements in the output {@link Iterator}
  */
-public class FlatMappingIterator<I, O> implements Iterator<O> {
-  private final Iterator<I> wrapped;
-  private final Function<I, Iterator<O>> flatten;
-  private Iterator<O> current = Collections.emptyIterator();
+public class FlatMappingIterator<Input, Output> implements Iterator<Output> {
+  private final Iterator<Input> wrapped;
+  private final Function<Input, Iterator<Output>> flatten;
+  private Iterator<Output> current = Collections.emptyIterator();
 
   /**
    * Create a flatmapping iterator around an existing iterator. Note that the existing iterator must
@@ -24,7 +24,7 @@ public class FlatMappingIterator<I, O> implements Iterator<O> {
    * @param wrapped The wrapped iterator to take items from
    * @param flatten The function to extract iterators from each element in the wrapped iterator
    */
-  public FlatMappingIterator(Iterator<I> wrapped, Function<I, Iterator<O>> flatten) {
+  public FlatMappingIterator(Iterator<Input> wrapped, Function<Input, Iterator<Output>> flatten) {
     if (Objects.isNull(wrapped)) {
       throw new IllegalArgumentException("Wrapped iterator cannot be null");
     }
@@ -48,7 +48,7 @@ public class FlatMappingIterator<I, O> implements Iterator<O> {
   }
 
   @Override
-  public O next() {
+  public Output next() {
     ensureCurrentHasNext();
     return current.next();
   }

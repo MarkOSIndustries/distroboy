@@ -11,15 +11,16 @@ import org.slf4j.LoggerFactory;
  * Represents an {@link Operation} applied to an {@link Operand} - to be treated as a new {@link
  * Operand} of it's own.
  *
- * @param <I> The type of data supplied by the upstream operand.
- * @param <O> The type of data produced by the applied operation.
- * @param <CO> The type of data collected by the applied operation.
+ * @param <Input> The type of data supplied by the upstream operand.
+ * @param <Output> The type of data produced by the applied operation.
+ * @param <CollectedOutput> The type of data collected by the applied operation.
  */
-public class AppliedOperation<I, O, CO> implements Operand<O, CO> {
+public class AppliedOperation<Input, Output, CollectedOutput>
+    implements Operand<Output, CollectedOutput> {
   private static final Logger log = LoggerFactory.getLogger(AppliedOperation.class);
 
-  private final Operand<I, ?> operand;
-  private final Operation<I, O, CO> operation;
+  private final Operand<Input, ?> operand;
+  private final Operation<Input, Output, CollectedOutput> operation;
 
   /**
    * Represents an {@link Operation} applied to an {@link Operand} - to be treated as a new {@link
@@ -28,7 +29,8 @@ public class AppliedOperation<I, O, CO> implements Operand<O, CO> {
    * @param operand The operand which the operation will be applied to
    * @param operation The operation to apply to the operand
    */
-  public AppliedOperation(Operand<I, ?> operand, Operation<I, O, CO> operation) {
+  public AppliedOperation(
+      Operand<Input, ?> operand, Operation<Input, Output, CollectedOutput> operation) {
     this.operand = operand;
     this.operation = operation;
   }
@@ -39,13 +41,13 @@ public class AppliedOperation<I, O, CO> implements Operand<O, CO> {
   }
 
   @Override
-  public IteratorWithResources<O> enumerateRangeForNode(DataSourceRange dataSourceRange)
+  public IteratorWithResources<Output> enumerateRangeForNode(DataSourceRange dataSourceRange)
       throws Exception {
     return operation.apply(operand.enumerateRangeForNode(dataSourceRange));
   }
 
   @Override
-  public CO collect(Iterator<O> results) {
+  public CollectedOutput collect(Iterator<Output> results) {
     return operation.collect(results);
   }
 }

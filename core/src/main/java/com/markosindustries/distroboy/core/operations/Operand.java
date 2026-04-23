@@ -9,19 +9,21 @@ import java.util.List;
  * Represents a data set which can be used with a {@link DistributedOpSequence} on a distroboy
  * cluster
  *
- * @param <I> The type of items in the data set
- * @param <CI> The type of items which will be collected if the dataset is not transformed
+ * @param <Input> The type of items in the data set
+ * @param <CollectedInput> The type of items which will be collected if the dataset is not
+ *     transformed
  */
-public interface Operand<I, CI> {
+public interface Operand<Input, CollectedInput> {
   /**
    * Produce a new operand representing the result of applying the given operation to this operand
    *
    * @param operation The operation to apply
-   * @param <O> The output type of the operation
-   * @param <CO> The collected value type of the operation
+   * @param <Output> The output type of the operation
+   * @param <CollectedOutput> The collected value type of the operation
    * @return A new {@link Operand}
    */
-  default <O, CO> Operand<O, CO> then(Operation<I, O, CO> operation) {
+  default <Output, CollectedOutput> Operand<Output, CollectedOutput> then(
+      Operation<Input, Output, CollectedOutput> operation) {
     return new AppliedOperation<>(this, operation);
   }
 
@@ -41,7 +43,8 @@ public interface Operand<I, CI> {
    *     preceding operations
    * @throws Exception If enumeration fails
    */
-  IteratorWithResources<I> enumerateRangeForNode(DataSourceRange dataSourceRange) throws Exception;
+  IteratorWithResources<Input> enumerateRangeForNode(DataSourceRange dataSourceRange)
+      throws Exception;
 
   /**
    * Given an iterator over the results of having produced this operand, transform them into the
@@ -51,5 +54,5 @@ public interface Operand<I, CI> {
    *     and it's preceding {@link Operation}s
    * @return The collected data, ready to be handled on the cluster leader at the end of the job
    */
-  CI collect(Iterator<I> results);
+  CollectedInput collect(Iterator<Input> results);
 }

@@ -106,12 +106,12 @@ public class ClusterMember implements AutoCloseable {
    * to process its assigned range.
    *
    * @param dataSource The data source to distribute across the cluster
-   * @param <I> The type of values in the data source
+   * @param <Input> The type of values in the data source
    * @return A future of collected value iterators for each cluster member
    * @throws IllegalStateException if this member is not the cluster leader
    */
-  public <I> List<CompletableFuture<Iterator<Value>>> distributeDataSource(
-      DataSource<I> dataSource) {
+  public <Input> List<CompletableFuture<Iterator<Value>>> distributeDataSource(
+      DataSource<Input> dataSource) {
     if (!isLeader()) {
       throw new IllegalStateException("Only the leader should distributed work to other members");
     }
@@ -188,10 +188,10 @@ public class ClusterMember implements AutoCloseable {
    * @see com.markosindustries.distroboy.core.operations.PersistToHeap
    * @param referenceId The identifier of the reference
    * @param distributableDataReference A distributable reference to some data
-   * @param <I> The type of values contained in the referenced data
+   * @param <T> The type of values contained in the referenced data
    */
-  public <I> void addDistributableData(
-      DataReferenceId referenceId, DistributableDataReference<I> distributableDataReference) {
+  public <T> void addDistributableData(
+      DataReferenceId referenceId, DistributableDataReference<T> distributableDataReference) {
     clusterMemberState.distributableData.add(referenceId, distributableDataReference);
   }
 

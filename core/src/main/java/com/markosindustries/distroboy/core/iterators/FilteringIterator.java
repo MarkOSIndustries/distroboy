@@ -7,13 +7,13 @@ import java.util.function.Predicate;
 /**
  * An iterator which will take elements in the wrapped iterator and filter them
  *
- * @param <I> The type of elements in {@link Iterator}
+ * @param <T> The type of elements in {@link Iterator}
  */
-public class FilteringIterator<I> implements Iterator<I> {
-  private final Iterator<I> wrapped;
-  private final Predicate<I> filter;
+public class FilteringIterator<T> implements Iterator<T> {
+  private final Iterator<T> wrapped;
+  private final Predicate<T> filter;
   private boolean hasNext;
-  private I next;
+  private T next;
 
   /**
    * Create a filtering iterator around an existing iterator. Note that the existing iterator must
@@ -22,7 +22,7 @@ public class FilteringIterator<I> implements Iterator<I> {
    * @param wrapped The wrapped iterator to take items from
    * @param filter The condition under which items are returned from this iterator
    */
-  public FilteringIterator(Iterator<I> wrapped, Predicate<I> filter) {
+  public FilteringIterator(Iterator<T> wrapped, Predicate<T> filter) {
     if (Objects.isNull(wrapped)) {
       throw new IllegalArgumentException("Wrapped iterator cannot be null");
     }
@@ -35,7 +35,7 @@ public class FilteringIterator<I> implements Iterator<I> {
     this.next = getNext();
   }
 
-  private I getNext() {
+  private T getNext() {
     while (wrapped.hasNext()) {
       final var next = wrapped.next();
       if (filter.test(next)) {
@@ -52,7 +52,7 @@ public class FilteringIterator<I> implements Iterator<I> {
   }
 
   @Override
-  public I next() {
+  public T next() {
     final var toReturn = next;
     next = getNext();
     return toReturn;

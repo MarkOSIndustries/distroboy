@@ -15,23 +15,23 @@ import java.util.Map;
  * used to distribute keys with the same hash to the same node, and then on each node grouping the
  * items by the same key.
  *
- * @param <I> The type of the input data set items
- * @param <II> The type of an {@link java.util.Iterator} of the input data set items
- * @param <K> The type of the keys {@link #classify} generates
+ * @param <Input> The type of the input data set items
+ * @param <InputIterator> The type of an {@link java.util.Iterator} of the input data set items
+ * @param <Key> The type of the keys {@link #classify} generates
  */
-public interface GroupByOp<I, II extends Iterator<I>, K>
-    extends Operation<II, Map.Entry<K, List<I>>, Map<K, List<I>>> {
+public interface GroupByOp<Input, InputIterator extends Iterator<Input>, Key>
+    extends Operation<InputIterator, Map.Entry<Key, List<Input>>, Map<Key, List<Input>>> {
   /**
    * Given an input, derive a key used to group items with the same key together
    *
    * @param input The value to derive a key for
    * @return They key corresponding to the given input
    */
-  K classify(I input);
+  Key classify(Input input);
 
   @Override
-  default IteratorWithResources<Map.Entry<K, List<I>>> apply(IteratorWithResources<II> input)
-      throws Exception {
+  default IteratorWithResources<Map.Entry<Key, List<Input>>> apply(
+      IteratorWithResources<InputIterator> input) throws Exception {
     return new FlatMappingIteratorWithResources<>(
         input,
         iterator -> {
@@ -44,7 +44,7 @@ public interface GroupByOp<I, II extends Iterator<I>, K>
   }
 
   @Override
-  default Map<K, List<I>> collect(Iterator<Map.Entry<K, List<I>>> results) {
+  default Map<Key, List<Input>> collect(Iterator<Map.Entry<Key, List<Input>>> results) {
     return IteratorTo.map(results);
   }
 }

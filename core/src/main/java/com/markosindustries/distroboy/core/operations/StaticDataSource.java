@@ -8,10 +8,10 @@ import java.util.List;
  * A data source which came from an in memory list. <i>All cluster members <b>must</b> see the same
  * list in the same order</i>.
  *
- * @param <I> The type of data in the {@link java.util.Collection}
+ * @param <Input> The type of data in the {@link java.util.List}
  */
-public class StaticDataSource<I> implements DataSource<I> {
-  private final List<I> data;
+public class StaticDataSource<Input> implements DataSource<Input> {
+  private final List<Input> data;
 
   /**
    * A data source which came from an in memory list. <i>All cluster members <b>must</b> see the
@@ -19,7 +19,7 @@ public class StaticDataSource<I> implements DataSource<I> {
    *
    * @param data The data to use as the source
    */
-  public StaticDataSource(List<I> data) {
+  public StaticDataSource(List<Input> data) {
     this.data = Collections.unmodifiableList(data);
   }
 
@@ -29,7 +29,8 @@ public class StaticDataSource<I> implements DataSource<I> {
   }
 
   @Override
-  public IteratorWithResources<I> enumerateRangeOfFullSet(long startInclusive, long endExclusive) {
+  public IteratorWithResources<Input> enumerateRangeOfFullSet(
+      long startInclusive, long endExclusive) {
     return IteratorWithResources.from(
         data.stream().skip(startInclusive).limit(endExclusive - startInclusive).iterator());
   }

@@ -6,9 +6,9 @@ import java.util.List;
 /**
  * A {@link ReduceOp} which produces a {@link Long} as its output
  *
- * @param <I> The type of data provided as input
+ * @param <Input> The type of data provided as input
  */
-public interface LongReduceOp<I> extends ReduceOp<I, Long> {
+public interface LongReduceOp<Input> extends ReduceOp<Input, Long> {
   default Long initAggregate() {
     return 0L;
   }

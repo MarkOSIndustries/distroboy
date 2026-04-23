@@ -10,17 +10,18 @@ import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.schemas.DataReference;
 import java.util.Iterator;
 
-class GetIteratorReferences<I> implements Operation<I, DataReference, DataReferenceList<I>> {
+class GetIteratorReferences<Input>
+    implements Operation<Input, DataReference, DataReferenceList<Input>> {
   private final Cluster cluster;
-  private final Serialiser<I> serialiser;
+  private final Serialiser<Input> serialiser;
 
-  GetIteratorReferences(Cluster cluster, Serialiser<I> serialiser) {
+  GetIteratorReferences(Cluster cluster, Serialiser<Input> serialiser) {
     this.cluster = cluster;
     this.serialiser = serialiser;
   }
 
   @Override
-  public IteratorWithResources<DataReference> apply(IteratorWithResources<I> input)
+  public IteratorWithResources<DataReference> apply(IteratorWithResources<Input> input)
       throws Exception {
     final DataReferenceId referenceId = new DataReferenceId();
     cluster.addDistributableData(
@@ -35,7 +36,7 @@ class GetIteratorReferences<I> implements Operation<I, DataReference, DataRefere
   }
 
   @Override
-  public DataReferenceList<I> collect(Iterator<DataReference> results) {
-    return new DataReferenceList<I>(IteratorTo.list(results));
+  public DataReferenceList<Input> collect(Iterator<DataReference> results) {
+    return new DataReferenceList<Input>(IteratorTo.list(results));
   }
 }

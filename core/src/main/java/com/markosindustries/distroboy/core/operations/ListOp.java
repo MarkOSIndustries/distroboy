@@ -7,12 +7,12 @@ import java.util.List;
 /**
  * An operation which collects a {@link List} of its outputs
  *
- * @param <I> The type of data provided as input
- * @param <O> The type of data being produced by this operation
+ * @param <Input> The type of data provided as input
+ * @param <Output> The type of data being produced by this operation
  */
-public interface ListOp<I, O> extends Operation<I, O, List<O>> {
+public interface ListOp<Input, Output> extends Operation<Input, Output, List<Output>> {
   @Override
-  default List<O> collect(Iterator<O> results) {
+  default List<Output> collect(Iterator<Output> results) {
     return IteratorTo.list(results);
   }
 }

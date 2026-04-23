@@ -9,11 +9,11 @@ import java.util.function.Supplier;
 /**
  * Represents a piece of data on a cluster member which can be distributed
  *
- * @param <I> The type of the distributable values
+ * @param <T> The type of the distributable values
  */
-public class DistributableDataReference<I> {
-  final Supplier<IteratorWithResources<I>> iteratorSupplier;
-  final Serialiser<I> serialiser;
+public class DistributableDataReference<T> {
+  final Supplier<IteratorWithResources<T>> iteratorSupplier;
+  final Serialiser<T> serialiser;
   private final boolean reiterable;
 
   /**
@@ -27,8 +27,8 @@ public class DistributableDataReference<I> {
    *     than once, otherwise <code>false</code>
    */
   public DistributableDataReference(
-      Supplier<IteratorWithResources<I>> iteratorSupplier,
-      Serialiser<I> serialiser,
+      Supplier<IteratorWithResources<T>> iteratorSupplier,
+      Serialiser<T> serialiser,
       boolean reiterable) {
     this.iteratorSupplier = iteratorSupplier;
     this.serialiser = serialiser;
@@ -54,12 +54,12 @@ public class DistributableDataReference<I> {
    *
    * @return An iterator of {@link ValueWithSerialiser}s
    */
-  IteratorWithResources<ValueWithSerialiser<I>> getIteratorWithSerialiser() {
+  IteratorWithResources<ValueWithSerialiser<T>> getIteratorWithSerialiser() {
     return new MappingIteratorWithResources<>(
         iteratorSupplier.get(), v -> new ValueWithSerialiser<>(v, serialiser));
   }
 
-  IteratorWithResources<I> getIterator() {
+  IteratorWithResources<T> getIterator() {
     return iteratorSupplier.get();
   }
 

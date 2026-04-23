@@ -11,11 +11,11 @@ import java.util.ArrayList;
  * {@link AutoCloseable} resource for each output value. These associated resources will be closed
  * when iteration of results is complete.
  *
- * @param <I> The type of the input data set items
- * @param <O> The type of the output data set items
+ * @param <Input> The type of the input data set items
+ * @param <Output> The type of the output data set items
  */
 @FunctionalInterface
-public interface MapOpWithResources<I, O> extends ListOp<I, O> {
+public interface MapOpWithResources<Input, Output> extends ListOp<Input, Output> {
   /**
    * Transform an input to the output type and wrap it in a {@link ResultWithResource} including the
    * resource to be closed when iteration is complete
@@ -23,15 +23,16 @@ public interface MapOpWithResources<I, O> extends ListOp<I, O> {
    * @param input The value to be mapped
    * @return The result of the map operation
    */
-  ResultWithResource<O> map(I input);
+  ResultWithResource<Output> map(Input input);
 
   @Override
-  default IteratorWithResources<O> apply(IteratorWithResources<I> input) throws Exception {
+  default IteratorWithResources<Output> apply(IteratorWithResources<Input> inputs)
+      throws Exception {
     final var resources = new ArrayList<AutoCloseable>();
     return new MappingIteratorWithResources<>(
-        input,
-        i -> {
-          final var resultWithResource = this.map(i);
+        inputs,
+        input -> {
+          final var resultWithResource = this.map(input);
           resources.add(resultWithResource.getResource());
           return resultWithResource.getResult();
         },

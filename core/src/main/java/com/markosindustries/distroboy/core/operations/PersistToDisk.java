@@ -20,12 +20,12 @@ import java.util.Iterator;
  * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if the
  * data doesn't fit in the available temp dir space, the entire job will fail.
  *
- * @param <I> The type of the data being persisted
+ * @param <Input> The type of the data being persisted
  */
-public class PersistToDisk<I>
-    implements Operation<I, DataReference, PersistedDataReferenceList<I>> {
+public class PersistToDisk<Input>
+    implements Operation<Input, DataReference, PersistedDataReferenceList<Input>> {
   private final Cluster cluster;
-  private final Serialiser<I> serialiser;
+  private final Serialiser<Input> serialiser;
 
   /**
    * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if the
@@ -34,13 +34,13 @@ public class PersistToDisk<I>
    * @param cluster The {@link Cluster} on which data is being persisted
    * @param serialiser A {@link Serialiser} for the data being persisted
    */
-  public PersistToDisk(Cluster cluster, Serialiser<I> serialiser) {
+  public PersistToDisk(Cluster cluster, Serialiser<Input> serialiser) {
     this.cluster = cluster;
     this.serialiser = serialiser;
   }
 
   @Override
-  public IteratorWithResources<DataReference> apply(IteratorWithResources<I> input)
+  public IteratorWithResources<DataReference> apply(IteratorWithResources<Input> input)
       throws Exception {
     final var file = File.createTempFile("db_persist_", ".bin");
     file.deleteOnExit();
@@ -81,7 +81,7 @@ public class PersistToDisk<I>
   }
 
   @Override
-  public PersistedDataReferenceList<I> collect(Iterator<DataReference> results) {
-    return new PersistedDataReferenceList<I>(IteratorTo.list(results));
+  public PersistedDataReferenceList<Input> collect(Iterator<DataReference> results) {
+    return new PersistedDataReferenceList<Input>(IteratorTo.list(results));
   }
 }

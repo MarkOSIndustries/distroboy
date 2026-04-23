@@ -15,12 +15,12 @@ import java.util.List;
  * Have each node in the cluster persist its fragment of the data to the heap. <b>WARNING:</b> if
  * the data doesn't fit in the available heap memory, the entire job will fail.
  *
- * @param <I> The type of the data being persisted
+ * @param <Input> The type of the data being persisted
  */
-public class PersistToHeap<I>
-    implements Operation<I, DataReference, PersistedDataReferenceList<I>> {
+public class PersistToHeap<Input>
+    implements Operation<Input, DataReference, PersistedDataReferenceList<Input>> {
   private final Cluster cluster;
-  private final Serialiser<I> serialiser;
+  private final Serialiser<Input> serialiser;
 
   /**
    * Have each node in the cluster persist its fragment of the data to the heap. <b>WARNING:</b> if
@@ -29,16 +29,16 @@ public class PersistToHeap<I>
    * @param cluster The {@link Cluster} on which data is being persisted
    * @param serialiser A {@link Serialiser} for the data being persisted
    */
-  public PersistToHeap(Cluster cluster, Serialiser<I> serialiser) {
+  public PersistToHeap(Cluster cluster, Serialiser<Input> serialiser) {
     this.cluster = cluster;
     this.serialiser = serialiser;
   }
 
   @Override
-  public IteratorWithResources<DataReference> apply(IteratorWithResources<I> input)
+  public IteratorWithResources<DataReference> apply(IteratorWithResources<Input> input)
       throws Exception {
     try (input) {
-      final List<I> asList = IteratorTo.list(input);
+      final List<Input> asList = IteratorTo.list(input);
 
       final DataReferenceId referenceId = new DataReferenceId();
       cluster.addDistributableData(
@@ -56,7 +56,7 @@ public class PersistToHeap<I>
   }
 
   @Override
-  public PersistedDataReferenceList<I> collect(Iterator<DataReference> results) {
-    return new PersistedDataReferenceList<I>(IteratorTo.list(results));
+  public PersistedDataReferenceList<Input> collect(Iterator<DataReference> results) {
+    return new PersistedDataReferenceList<Input>(IteratorTo.list(results));
   }
 }

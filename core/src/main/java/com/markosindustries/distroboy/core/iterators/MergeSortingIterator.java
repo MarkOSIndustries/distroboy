@@ -5,12 +5,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
-public class MergeSortingIterator<I> implements Iterator<I> {
-  private final List<? extends Iterator<I>> sourceIterators;
-  private final TreeMap<I, Integer> nextFromEachWithIteratorIndex;
+public class MergeSortingIterator<T> implements Iterator<T> {
+  private final List<? extends Iterator<T>> sourceIterators;
+  private final TreeMap<T, Integer> nextFromEachWithIteratorIndex;
 
   public MergeSortingIterator(
-      List<? extends Iterator<I>> sortedIteratorsToMergeSort, Comparator<I> comparator) {
+      List<? extends Iterator<T>> sortedIteratorsToMergeSort, Comparator<T> comparator) {
     this.sourceIterators = sortedIteratorsToMergeSort;
     this.nextFromEachWithIteratorIndex = new TreeMap<>(comparator);
 
@@ -28,7 +28,7 @@ public class MergeSortingIterator<I> implements Iterator<I> {
   }
 
   @Override
-  public I next() {
+  public T next() {
     final var next = nextFromEachWithIteratorIndex.firstEntry();
     nextFromEachWithIteratorIndex.remove(next.getKey());
     final var sourceIteratorIndex = next.getValue();

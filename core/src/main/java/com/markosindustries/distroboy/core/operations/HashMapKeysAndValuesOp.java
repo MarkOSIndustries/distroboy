@@ -10,20 +10,23 @@ import java.util.Map;
  * Transform the keys and values for each item in the data set independently of each other. If you
  * need to map the keys and values in context of each other - use {@link HashMapToListOp}
  *
- * @param <K> The type of input Map keys
- * @param <V> The type of input Map values
- * @param <K2> The type of output Map keys
- * @param <V2> The type of output Map values
+ * @param <InputKey> The type of input Map keys
+ * @param <InputValue> The type of input Map values
+ * @param <OutputKey> The type of output Map keys
+ * @param <OutputValue> The type of output Map values
  */
-public interface HashMapKeysAndValuesOp<K, V, K2, V2>
-    extends Operation<Map.Entry<K, V>, Map.Entry<K2, V2>, Map<K2, V2>> {
+public interface HashMapKeysAndValuesOp<InputKey, InputValue, OutputKey, OutputValue>
+    extends Operation<
+        Map.Entry<InputKey, InputValue>,
+        Map.Entry<OutputKey, OutputValue>,
+        Map<OutputKey, OutputValue>> {
   /**
    * Transform a key to the output key type
    *
    * @param key The key to transform
    * @return The resulting key
    */
-  K2 mapKey(K key);
+  OutputKey mapKey(InputKey key);
 
   /**
    * Transform a value to the output value type
@@ -31,19 +34,19 @@ public interface HashMapKeysAndValuesOp<K, V, K2, V2>
    * @param value The value to transform
    * @return The resulting value
    */
-  V2 mapValue(V value);
+  OutputValue mapValue(InputValue value);
 
   @Override
-  default IteratorWithResources<Map.Entry<K2, V2>> apply(
-      IteratorWithResources<Map.Entry<K, V>> input) throws Exception {
-    return new IteratorWithResources<Map.Entry<K2, V2>>() {
+  default IteratorWithResources<Map.Entry<OutputKey, OutputValue>> apply(
+      IteratorWithResources<Map.Entry<InputKey, InputValue>> input) throws Exception {
+    return new IteratorWithResources<Map.Entry<OutputKey, OutputValue>>() {
       @Override
       public boolean hasNext() {
         return input.hasNext();
       }
 
       @Override
-      public Map.Entry<K2, V2> next() {
+      public Map.Entry<OutputKey, OutputValue> next() {
         final var next = input.next();
         return new AbstractMap.SimpleImmutableEntry<>(
             mapKey(next.getKey()), mapValue(next.getValue()));
@@ -57,7 +60,7 @@ public interface HashMapKeysAndValuesOp<K, V, K2, V2>
   }
 
   @Override
-  default Map<K2, V2> collect(Iterator<Map.Entry<K2, V2>> results) {
+  default Map<OutputKey, OutputValue> collect(Iterator<Map.Entry<OutputKey, OutputValue>> results) {
     return IteratorTo.map(results);
   }
 }

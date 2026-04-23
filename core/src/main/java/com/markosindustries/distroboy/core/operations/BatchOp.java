@@ -9,9 +9,9 @@ import java.util.List;
  * An operation which groups inputs into batches of a given size.
  *
  * @see Iterators#partition(Iterator, int)
- * @param <I> The type of data provided as input
+ * @param <Input> The type of data provided as input
  */
-public class BatchOp<I> implements ListOp<I, List<I>> {
+public class BatchOp<Input> implements ListOp<Input, List<Input>> {
   private final int batchSize;
 
   /**
@@ -24,7 +24,8 @@ public class BatchOp<I> implements ListOp<I, List<I>> {
   }
 
   @Override
-  public IteratorWithResources<List<I>> apply(IteratorWithResources<I> input) throws Exception {
+  public IteratorWithResources<List<Input>> apply(IteratorWithResources<Input> input)
+      throws Exception {
     return IteratorWithResources.from(Iterators.partition(input, batchSize), input);
   }
 }

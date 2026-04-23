@@ -26,13 +26,13 @@ import java.util.stream.Collectors;
  * will be read in the order specified by the given {@link Comparator}. <b>WARNING:</b> if the data
  * doesn't fit in the available temp dir space, the entire job will fail.
  *
- * @param <I> The type of the data being persisted
+ * @param <Input> The type of the data being persisted
  */
-public class PersistSortedToDisk<I>
-    implements Operation<I, DataReference, SortedDataReferenceList<I>> {
+public class PersistSortedToDisk<Input>
+    implements Operation<Input, DataReference, SortedDataReferenceList<Input>> {
   private final Cluster cluster;
-  private final Serialiser<I> serialiser;
-  private final Comparator<I> comparator;
+  private final Serialiser<Input> serialiser;
+  private final Comparator<Input> comparator;
 
   /**
    * Have each node in the cluster persist its fragment of the data to disk. <b>WARNING:</b> if the
@@ -42,7 +42,8 @@ public class PersistSortedToDisk<I>
    * @param serialiser A {@link Serialiser} for the data being persisted
    * @param comparator A {@link Comparator} used to sort the data being persisted
    */
-  public PersistSortedToDisk(Cluster cluster, Serialiser<I> serialiser, Comparator<I> comparator) {
+  public PersistSortedToDisk(
+      Cluster cluster, Serialiser<Input> serialiser, Comparator<Input> comparator) {
     this.cluster = cluster;
     this.serialiser = serialiser;
     this.comparator = comparator;
@@ -52,15 +53,16 @@ public class PersistSortedToDisk<I>
   private static final int ITEMS_PER_FILE = 10_000;
 
   @Override
-  public IteratorWithResources<DataReference> apply(IteratorWithResources<I> input)
+  public IteratorWithResources<DataReference> apply(IteratorWithResources<Input> input)
       throws Exception {
     long valueCount = 0;
 
-    final var protobufFileIteratorSuppliers = new ArrayList<Supplier<IteratorWithResources<I>>>();
+    final var protobufFileIteratorSuppliers =
+        new ArrayList<Supplier<IteratorWithResources<Input>>>();
 
     try (input) {
       while (input.hasNext()) {
-        final var itemsForNextFile = new ArrayList<I>(ITEMS_PER_FILE);
+        final var itemsForNextFile = new ArrayList<Input>(ITEMS_PER_FILE);
         for (int i = 0; i < ITEMS_PER_FILE && input.hasNext(); i++) {
           itemsForNextFile.add(input.next());
         }
@@ -71,7 +73,7 @@ public class PersistSortedToDisk<I>
         try (final var fileOutputStream = new FileOutputStream(file, false)) {
           CodedOutputStream codedOutputStream =
               CodedOutputStream.newInstance(fileOutputStream, 4096);
-          for (final I item : itemsForNextFile) {
+          for (final Input item : itemsForNextFile) {
             codedOutputStream.writeByteArrayNoTag(serialiser.serialise(item).toByteArray());
           }
           valueCount += itemsForNextFile.size();
@@ -113,7 +115,7 @@ public class PersistSortedToDisk<I>
   }
 
   @Override
-  public SortedDataReferenceList<I> collect(Iterator<DataReference> results) {
-    return new SortedDataReferenceList<I>(IteratorTo.list(results));
+  public SortedDataReferenceList<Input> collect(Iterator<DataReference> results) {
+    return new SortedDataReferenceList<Input>(IteratorTo.list(results));
   }
 }

@@ -8,11 +8,11 @@ import java.util.Map;
  * Transform each Map.Entry in the data set using the given mapping operation. Purely here for the
  * convenience of being able to provide a lambda which takes a key/value as separate parameters.
  *
- * @param <K> The type of input Map keys
- * @param <V> The type of input Map values
- * @param <O> The type of values in the output list
+ * @param <Key> The type of input Map keys
+ * @param <Value> The type of input Map values
+ * @param <Output> The type of values in the output list
  */
-public interface HashMapToListOp<K, V, O> extends ListOp<Map.Entry<K, V>, O> {
+public interface HashMapToListOp<Key, Value, Output> extends ListOp<Map.Entry<Key, Value>, Output> {
   /**
    * Transform a key-value pair into the output type
    *
@@ -20,10 +20,10 @@ public interface HashMapToListOp<K, V, O> extends ListOp<Map.Entry<K, V>, O> {
    * @param value The value
    * @return The result of mapping the key-value pair
    */
-  O map(K key, V value);
+  Output map(Key key, Value value);
 
   @Override
-  default IteratorWithResources<O> apply(IteratorWithResources<Map.Entry<K, V>> input)
+  default IteratorWithResources<Output> apply(IteratorWithResources<Map.Entry<Key, Value>> input)
       throws Exception {
     return new MappingIteratorWithResources<>(
         input, entry -> this.map(entry.getKey(), entry.getValue()));

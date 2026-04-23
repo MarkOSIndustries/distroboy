@@ -9,11 +9,11 @@ import java.util.List;
  * while processing data sets. While this is useful to ensure that preceding steps are complete for
  * all data items, it does mean the entire data set at this point must fit into working memory.
  *
- * @param <I> The type of items to materialise
+ * @param <Input> The type of items to materialise
  */
-public class MaterialiseOp<I> implements ListOp<I, I> {
+public class MaterialiseOp<Input> implements ListOp<Input, Input> {
   @Override
-  public IteratorWithResources<I> apply(IteratorWithResources<I> input) throws Exception {
+  public IteratorWithResources<Input> apply(IteratorWithResources<Input> input) throws Exception {
     try (input) {
       final var list = IteratorTo.list(input);
       return IteratorWithResources.from(list.iterator());

@@ -9,9 +9,9 @@ import com.markosindustries.distroboy.core.iterators.SparseIteratorWithResources
  * Nth item (where N is the number of cluster members). This can be more efficient when determining
  * the size of the data set is costly.
  *
- * @param <I> The type of items in the data source
+ * @param <Input> The type of items in the data source
  */
-public abstract class InterleavedDataSource<I> implements DataSource<I> {
+public abstract class InterleavedDataSource<Input> implements DataSource<Input> {
   private final int expectedClusterMembers;
 
   /**
@@ -31,9 +31,9 @@ public abstract class InterleavedDataSource<I> implements DataSource<I> {
   }
 
   @Override
-  public final IteratorWithResources<I> enumerateRangeOfFullSet(
+  public final IteratorWithResources<Input> enumerateRangeOfFullSet(
       long startInclusive, long endExclusive) {
-    return new SparseIteratorWithResources<I>(
+    return new SparseIteratorWithResources<Input>(
         enumerateFullSet(), (int) startInclusive, expectedClusterMembers);
   }
 
@@ -44,5 +44,5 @@ public abstract class InterleavedDataSource<I> implements DataSource<I> {
    *
    * @return An {@link IteratorWithResources} over the entire dataset
    */
-  protected abstract IteratorWithResources<I> enumerateFullSet();
+  protected abstract IteratorWithResources<Input> enumerateFullSet();
 }
