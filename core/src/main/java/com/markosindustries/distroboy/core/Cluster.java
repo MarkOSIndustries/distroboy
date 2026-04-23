@@ -18,7 +18,6 @@ import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
 import com.markosindustries.distroboy.core.iterators.MappingIteratorWithResources;
 import com.markosindustries.distroboy.core.iterators.MergeSortingIteratorWithResources;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
-import com.markosindustries.distroboy.core.operations.EvenlyRedistributedDataSource;
 import com.markosindustries.distroboy.core.operations.StaticDataSource;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceHashSpec;
@@ -361,7 +360,10 @@ public final class Cluster implements AutoCloseable {
   }
 
   /**
-   * Persist the data in its current form across the cluster, and give all nodes references
+   * Persist the data in its current form across the cluster, and give all nodes references.
+   * Importantly, all nodes will receive the same set of references, so this reference list is
+   * usable in starting downstream cluster operations. See {@link #redistributeEqually} or {@link
+   * #fromPersistedData}, for example.
    *
    * @param opSequence The set of operations to be performed before persisting the data
    * @param <I> The input type
@@ -377,7 +379,9 @@ public final class Cluster implements AutoCloseable {
 
   /**
    * Persist and locally sort the data in its current form across the cluster, and give all nodes
-   * references
+   * references. Importantly, all nodes will receive the same set of references, so this reference
+   * list is usable in starting downstream cluster operations. See {@link #redistributeEqually} or
+   * {@link #fromPersistedData}, for example.
    *
    * @param opSequence The set of operations to be performed before persisting the data
    * @param <I> The input type
@@ -389,6 +393,25 @@ public final class Cluster implements AutoCloseable {
       DistributedOpSequence<I, DataReference, SortedDataReferenceList<O>> opSequence)
       throws InterruptedException {
     return new SortedDataReferenceList<O>(distributeReferencesRaw(opSequence));
+  }
+
+  /**
+   * Given a list of references to persisted data, each node uses the references which are local and
+   * processes those only. In this way, no data needs to be moved around the cluster. This is useful
+   * when you just want to store a result at one stage of a pipeline and reuse it for multiple
+   * downstream stages.
+   *
+   * <p>If you want to redistribute the data around the cluster to balance processing - use {@link
+   * #redistributeEqually}
+   *
+   * @param dataReferences The references to the persisted data
+   * @param <I> The persisted data type
+   * @return A new DistributedOpSequence whose DataSource is the persisted data
+   */
+  public <I> DistributedOpSequence.Builder<I, I, List<I>> fromPersistedData(
+      PersistedDataReferenceList<I> dataReferences) {
+    return DistributedOpSequence.readFrom(
+        new LocallyPersistedDataSource<>(this.clusterMember, dataReferences));
   }
 
   /**

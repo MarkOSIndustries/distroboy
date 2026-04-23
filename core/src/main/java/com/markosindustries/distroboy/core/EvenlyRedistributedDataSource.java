@@ -1,7 +1,7 @@
-package com.markosindustries.distroboy.core.operations;
+package com.markosindustries.distroboy.core;
 
-import com.markosindustries.distroboy.core.PersistedDataReferenceList;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
+import com.markosindustries.distroboy.core.operations.DataSource;
 import com.markosindustries.distroboy.schemas.DataReference;
 import com.markosindustries.distroboy.schemas.DataReferenceRange;
 import com.markosindustries.distroboy.schemas.DataSourceRange;
@@ -16,7 +16,7 @@ import java.util.List;
  *
  * @param <I> The type of data stored in the references
  */
-public class EvenlyRedistributedDataSource<I> implements DataSource<DataReferenceRange> {
+class EvenlyRedistributedDataSource<I> implements DataSource<DataReferenceRange> {
   private final List<DataReference> dataReferences;
 
   /**
@@ -25,7 +25,7 @@ public class EvenlyRedistributedDataSource<I> implements DataSource<DataReferenc
    *
    * @param dataReferences The references to persisted data to redistribute
    */
-  public EvenlyRedistributedDataSource(PersistedDataReferenceList<I> dataReferences) {
+  EvenlyRedistributedDataSource(PersistedDataReferenceList<I> dataReferences) {
     this.dataReferences = dataReferences.list();
     this.count = this.dataReferences.stream().mapToLong(DataReference::getCount).sum();
   }

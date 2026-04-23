@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 
 import ch.qos.logback.classic.Level;
 import com.markosindustries.distroboy.core.Hashing;
+import com.markosindustries.distroboy.core.SumIntegers;
 import com.markosindustries.distroboy.core.clustering.ClusterMemberId;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.operations.DistributedOpSequence;
@@ -175,6 +176,40 @@ public class HappyPathTests {
                             .collect(Collectors.toUnmodifiableSet());
 
                     Assertions.assertEquals(3, uniqueMemberIds.size());
+                  });
+        });
+  }
+
+  @Test
+  public void canUseFromPersistedData() throws Exception {
+    final var expectedValues = List.of(1, 2, 3, 4, 5, 6);
+
+    DistroBoySingleProcess.run(
+        "InProcessDistroBoyTest.canUseFromPersistedData",
+        3,
+        cluster -> {
+          final var simpleJob =
+              DistributedOpSequence.readFrom(new StaticDataSource<>(expectedValues))
+                  .persistToHeap(cluster, Serialisers.integerValues);
+
+          final var dataReferences = cluster.persist(simpleJob);
+
+          final var redistributeJob =
+              cluster
+                  .fromPersistedData(dataReferences)
+                  .reduce(new SumIntegers())
+                  // just to stop the reduce from being the one controlling the reduce
+                  .map(localSum -> localSum)
+                  .collect(Serialisers.longValues);
+
+          cluster
+              .execute(redistributeJob)
+              .onClusterLeader(
+                  memberSums -> {
+                    Assertions.assertEquals(3, memberSums.size());
+                    Assertions.assertEquals(3, memberSums.get(0)); // 1 + 2
+                    Assertions.assertEquals(7, memberSums.get(1)); // 3 + 4
+                    Assertions.assertEquals(11, memberSums.get(2)); // 5 + 6
                   });
         });
   }

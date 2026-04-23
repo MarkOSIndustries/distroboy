@@ -59,6 +59,10 @@ public class DistributableDataReference<I> {
         iteratorSupplier.get(), v -> new ValueWithSerialiser<>(v, serialiser));
   }
 
+  IteratorWithResources<I> getIterator() {
+    return iteratorSupplier.get();
+  }
+
   public boolean isReiterable() {
     return this.reiterable;
   }

@@ -7,6 +7,8 @@ import com.markosindustries.distroboy.core.Cluster;
 import com.markosindustries.distroboy.core.DistributedSampleSort;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
+import com.markosindustries.distroboy.core.iterators.FilteringIterator;
+import com.markosindustries.distroboy.core.iterators.FlatMappingIterator;
 import com.markosindustries.distroboy.core.operations.DataSource;
 import com.markosindustries.distroboy.schemas.ClusterMembers;
 import com.markosindustries.distroboy.schemas.DataReference;
@@ -122,6 +124,21 @@ public class ClusterMember implements AutoCloseable {
       memberJobs.add(CompletableFuture.supplyAsync(() -> member.process(range)));
     }
     return memberJobs;
+  }
+
+  public <T> Iterator<T> retrieveLocalDataReferences(final List<DataReference> dataReferences) {
+    final var selfIdAsBytes = cluster.clusterMemberId.asBytes();
+    //noinspection unchecked
+    return new FlatMappingIterator<>(
+        new FilteringIterator<>(
+            dataReferences.iterator(),
+            dataReference -> selfIdAsBytes.equals(dataReference.getMemberId())),
+        dataReference ->
+            (Iterator<T>)
+                clusterMemberState
+                    .distributableData
+                    .retrieve(DataReferenceId.fromBytes(dataReference.getReferenceId()))
+                    .getIterator());
   }
 
   /**
