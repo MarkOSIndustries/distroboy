@@ -8,11 +8,15 @@ import com.markosindustries.distroboy.core.clustering.serialisation.ProtobufValu
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialiser;
 import com.markosindustries.distroboy.core.clustering.serialisation.Serialisers;
 import com.markosindustries.distroboy.core.iterators.IteratorWithResources;
+import com.markosindustries.distroboy.core.iterators.MappingIterator;
 import com.markosindustries.distroboy.schemas.DataReference;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 /**
@@ -107,12 +111,12 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Generic extension point for using arbitrary operations external to DistroBoy.
      *
      * @param op The operation to apply next
-     * @param <NewOuput> The new output type of the sequence
+     * @param <NewOutput> The new output type of the sequence
      * @param <NewCollectedOuput> The new collected output type of the sequence
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput, NewCollectedOuput> Builder<Input, NewOuput, NewCollectedOuput> then(
-        Operation<Output, NewOuput, NewCollectedOuput> op) {
+    public <NewOutput, NewCollectedOuput> Builder<Input, NewOutput, NewCollectedOuput> then(
+        Operation<Output, NewOutput, NewCollectedOuput> op) {
       return new Builder<>(dataSource, operand.then(op));
     }
 
@@ -120,10 +124,11 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Transforms each item via the given {@link MapOp}
      *
      * @param mapOp the mapping operation
-     * @param <NewOuput> The new output type of the sequence
+     * @param <NewOutput> The new output type of the sequence
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput> Builder<Input, NewOuput, List<NewOuput>> map(MapOp<Output, NewOuput> mapOp) {
+    public <NewOutput> Builder<Input, NewOutput, List<NewOutput>> map(
+        MapOp<Output, NewOutput> mapOp) {
       return new Builder<>(dataSource, operand.then(mapOp));
     }
 
@@ -132,11 +137,11 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * when done.
      *
      * @param mapOp the mapping operation
-     * @param <NewOuput> The new output type of the sequence
+     * @param <NewOutput> The new output type of the sequence
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput> Builder<Input, NewOuput, List<NewOuput>> mapWithResources(
-        MapOpWithResources<Output, NewOuput> mapOp) {
+    public <NewOutput> Builder<Input, NewOutput, List<NewOutput>> mapWithResources(
+        MapOpWithResources<Output, NewOutput> mapOp) {
       return new Builder<>(dataSource, operand.then(mapOp));
     }
 
@@ -145,14 +150,14 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * IteratorWithResources}
      *
      * @param mapOp the mapping operation
-     * @param <NewOuput> The new output type of the sequence
-     * @param <NewOuputIterator> The Iterator type of the new output type
+     * @param <NewOutput> The new output type of the sequence
+     * @param <NewOutputIterator> The Iterator type of the new output type
      * @return A new {@link DistributedOpSequence.IteratorBuilder} with this operation applied at
      *     the end
      */
-    public <NewOuput, NewOuputIterator extends Iterator<NewOuput>>
-        IteratorBuilder<Input, NewOuput, NewOuputIterator, List<NewOuputIterator>> mapToIterators(
-            MapOp<Output, NewOuputIterator> mapOp) {
+    public <NewOutput, NewOutputIterator extends Iterator<NewOutput>>
+        IteratorBuilder<Input, NewOutput, NewOutputIterator, List<NewOutputIterator>>
+            mapToIterators(MapOp<Output, NewOutputIterator> mapOp) {
       return new IteratorBuilder<>(dataSource, operand.then(mapOp));
     }
 
@@ -161,19 +166,19 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Iterable}
      *
      * @param mapOp the mapping operation
-     * @param <NewOuput> The new output type of the sequence
-     * @param <NewOuputIterable> The Iterable type of the new output type
+     * @param <NewOutput> The new output type of the sequence
+     * @param <NewOutputIterable> The Iterable type of the new output type
      * @return A new {@link DistributedOpSequence.IteratorBuilder} with this operation applied at
      *     the end
      */
-    public <NewOuput, NewOuputIterable extends Iterable<NewOuput>>
-        IteratorBuilder<Input, NewOuput, Iterator<NewOuput>, List<Iterator<NewOuput>>>
-            mapToIterables(MapOp<Output, NewOuputIterable> mapOp) {
+    public <NewOutput, NewOutputIterable extends Iterable<NewOutput>>
+        IteratorBuilder<Input, NewOutput, Iterator<NewOutput>, List<Iterator<NewOutput>>>
+            mapToIterables(MapOp<Output, NewOutputIterable> mapOp) {
       return new IteratorBuilder<>(
           dataSource,
           operand
               .then(mapOp)
-              .then((MapOp<NewOuputIterable, Iterator<NewOuput>>) IteratorWithResources::from));
+              .then((MapOp<NewOutputIterable, Iterator<NewOutput>>) IteratorWithResources::from));
     }
 
     /**
@@ -181,11 +186,11 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Iterator
      *
      * @param flatMapOp the flat-mapping operation
-     * @param <NewOuput> The new output type of the sequence
+     * @param <NewOutput> The new output type of the sequence
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput> Builder<Input, NewOuput, List<NewOuput>> flatMap(
-        FlatMapOp<Output, NewOuput> flatMapOp) {
+    public <NewOutput> Builder<Input, NewOutput, List<NewOutput>> flatMap(
+        FlatMapOp<Output, NewOutput> flatMapOp) {
       return new Builder<>(dataSource, operand.then(flatMapOp));
     }
 
@@ -194,13 +199,13 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Iterator, where the output type is an {@link Iterator}
      *
      * @param flatMapOp the flat-mapping operation
-     * @param <NewOuput> The new output type of the sequence
-     * @param <NewOuputIterator> The Iterator type of the new output type
+     * @param <NewOutput> The new output type of the sequence
+     * @param <NewOutputIterator> The Iterator type of the new output type
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput, NewOuputIterator extends Iterator<NewOuput>>
-        IteratorBuilder<Input, NewOuput, NewOuputIterator, List<NewOuputIterator>>
-            flatMapToIterators(FlatMapOp<Output, NewOuputIterator> flatMapOp) {
+    public <NewOutput, NewOutputIterator extends Iterator<NewOutput>>
+        IteratorBuilder<Input, NewOutput, NewOutputIterator, List<NewOutputIterator>>
+            flatMapToIterators(FlatMapOp<Output, NewOutputIterator> flatMapOp) {
       return new IteratorBuilder<>(dataSource, operand.then(flatMapOp));
     }
 
@@ -209,29 +214,29 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Iterator, where the output type is an {@link Iterable}
      *
      * @param flatMapOp the flat-mapping operation
-     * @param <NewOuput> The new output type of the sequence
-     * @param <NewOuputIterable> The Iterable type of the new output type
+     * @param <NewOutput> The new output type of the sequence
+     * @param <NewOutputIterable> The Iterable type of the new output type
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput, NewOuputIterable extends Iterable<NewOuput>>
-        IteratorBuilder<Input, NewOuput, Iterator<NewOuput>, List<Iterator<NewOuput>>>
-            flatMapToIterables(FlatMapOp<Output, NewOuputIterable> flatMapOp) {
+    public <NewOutput, NewOutputIterable extends Iterable<NewOutput>>
+        IteratorBuilder<Input, NewOutput, Iterator<NewOutput>, List<Iterator<NewOutput>>>
+            flatMapToIterables(FlatMapOp<Output, NewOutputIterable> flatMapOp) {
       return new IteratorBuilder<>(
           dataSource,
           operand
               .then(flatMapOp)
-              .then((MapOp<NewOuputIterable, Iterator<NewOuput>>) IteratorWithResources::from));
+              .then((MapOp<NewOutputIterable, Iterator<NewOutput>>) IteratorWithResources::from));
     }
 
     /**
      * Aggregates each item via the given {@link ReduceOp}
      *
      * @param reduceOp the reducing operation
-     * @param <NewOuput> The new output type of the sequence
+     * @param <NewOutput> The new output type of the sequence
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput> Builder<Input, NewOuput, NewOuput> reduce(
-        ReduceOp<Output, NewOuput> reduceOp) {
+    public <NewOutput> Builder<Input, NewOutput, NewOutput> reduce(
+        ReduceOp<Output, NewOutput> reduceOp) {
       return new Builder<>(dataSource, operand.then(reduceOp));
     }
 
@@ -240,13 +245,13 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Iterator}
      *
      * @param reduceOp the reducing operation
-     * @param <NewOuput> The new output type of the sequence
-     * @param <NewOuputIterator> The Iterator type of the new output type
+     * @param <NewOutput> The new output type of the sequence
+     * @param <NewOutputIterator> The Iterator type of the new output type
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput, NewOuputIterator extends Iterator<NewOuput>>
-        IteratorBuilder<Input, NewOuput, NewOuputIterator, NewOuputIterator> reduceToIterators(
-            ReduceOp<Output, NewOuputIterator> reduceOp) {
+    public <NewOutput, NewOutputIterator extends Iterator<NewOutput>>
+        IteratorBuilder<Input, NewOutput, NewOutputIterator, NewOutputIterator> reduceToIterators(
+            ReduceOp<Output, NewOutputIterator> reduceOp) {
       return new IteratorBuilder<>(dataSource, operand.then(reduceOp));
     }
 
@@ -255,18 +260,18 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      * Iterable}
      *
      * @param reduceOp the reducing operation
-     * @param <NewOuput> The new output type of the sequence
-     * @param <NewOuputIterable> The Iterable type of the new output type
+     * @param <NewOutput> The new output type of the sequence
+     * @param <NewOutputIterable> The Iterable type of the new output type
      * @return A new {@link DistributedOpSequence.Builder} with this operation applied at the end
      */
-    public <NewOuput, NewOuputIterable extends Iterable<NewOuput>>
-        IteratorBuilder<Input, NewOuput, Iterator<NewOuput>, List<Iterator<NewOuput>>>
-            reduceToIterables(ReduceOp<Output, NewOuputIterable> reduceOp) {
+    public <NewOutput, NewOutputIterable extends Iterable<NewOutput>>
+        IteratorBuilder<Input, NewOutput, Iterator<NewOutput>, List<Iterator<NewOutput>>>
+            reduceToIterables(ReduceOp<Output, NewOutputIterable> reduceOp) {
       return new IteratorBuilder<>(
           dataSource,
           operand
               .then(reduceOp)
-              .then((MapOp<NewOuputIterable, Iterator<NewOuput>>) IteratorWithResources::from));
+              .then((MapOp<NewOutputIterable, Iterator<NewOutput>>) IteratorWithResources::from));
     }
 
     /**
@@ -287,6 +292,14 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      */
     public Builder<Input, List<Output>, List<List<Output>>> batch(int batchSize) {
       return new Builder<>(dataSource, operand.then(new BatchOp<>(batchSize)));
+    }
+
+    public FuturesBuilder<Input, Output, CompletableFuture<Output>, List<CompletableFuture<Output>>>
+        asFutures() {
+      return new FuturesBuilder<>(
+          dataSource,
+          operand.then(
+              (MapOp<Output, CompletableFuture<Output>>) CompletableFuture::completedFuture));
     }
 
     /**
@@ -532,6 +545,141 @@ public class DistributedOpSequence<Input, Outcome, CollectedOutcome> {
      */
     public <O> Builder<Input, O, List<O>> map(HashMapToListOp<Key, Value, O> mapOp) {
       return new Builder<>(dataSource, operand.then(mapOp));
+    }
+  }
+
+  /**
+   * A small interface builder designed to help avoid common pitfalls with using threads in a
+   * distributed compute job. For example, there is no <code>collect</code> method because
+   * collecting futures wouldn't make sense, we need to join those futures on each node and then
+   * collect the results.
+   *
+   * <p>Use {@link #joinFuturesInBatches} to get back to the full {@link Builder} functionality.
+   *
+   * @param <Input> The type of data in the data source
+   * @param <Output> The type of data the resulting Futures will contain
+   * @param <OutputFuture> The type of the resulting Futures
+   * @param <CollectedOutput> The type of data which would be collected by the current op sequence
+   */
+  public static class FuturesBuilder<
+      Input, Output, OutputFuture extends CompletableFuture<Output>, CollectedOutput> {
+    /** The {@link DataSource} this operation sequence will draw from */
+    protected final DataSource<Input> dataSource;
+    /** The current end of the operation sequence */
+    protected final Operand<OutputFuture, CollectedOutput> operand;
+
+    /**
+     * Start a new {@link FuturesBuilder} builder
+     *
+     * @param dataSource The {@link DataSource} for the operation sequence to start from
+     * @param operand The last operand in the chain of operations
+     */
+    FuturesBuilder(DataSource<Input> dataSource, Operand<OutputFuture, CollectedOutput> operand) {
+      this.dataSource = dataSource;
+      this.operand = operand;
+    }
+
+    /**
+     * Materialise the futures this operation chain produces in batches, and wait for them to
+     * complete before extracting the result as the output from this operation.
+     *
+     * <p>⚠️ It is important to consider the batch size, because each node will have the working
+     * memory AND results of that many futures in memory simultaneously.
+     *
+     * @param batchSize How many futures should be evaluated and waited on at once
+     * @return A new {@link Builder} with this operation applied at the end
+     */
+    public Builder<Input, Output, List<Output>> joinFuturesInBatches(int batchSize) {
+      return new Builder<>(dataSource, operand)
+          .batch(batchSize)
+          .mapToIterators(
+              futures -> new MappingIterator<>(futures.iterator(), CompletableFuture::join))
+          .flatten();
+    }
+
+    /**
+     * Transforms each future via the given {@link MapOp}
+     *
+     * @param mapOp the mapping operation
+     * @param <NewOutput> The new output type of the sequence
+     * @return A new {@link FuturesBuilder} with this operation applied at the end
+     */
+    public <NewOutput, NewOutputFuture extends CompletableFuture<NewOutput>>
+        FuturesBuilder<Input, NewOutput, NewOutputFuture, List<NewOutputFuture>> mapFutures(
+            MapOp<OutputFuture, NewOutputFuture> mapOp) {
+      return new FuturesBuilder<>(dataSource, operand.then(mapOp));
+    }
+
+    /**
+     * Transforms the result of each future via the given {@link Function}
+     *
+     * <p>This is just syntactic sugar for <code>mapFutures(f -> f.thenApplyAsync(mapOp))</code>
+     *
+     * @param mapOp the mapping operation
+     * @param <NewOutput> The output type of the resulting futures
+     * @return A new {@link FuturesBuilder} with this operation applied at the end
+     */
+    public <NewOutput>
+        FuturesBuilder<
+                Input, NewOutput, CompletableFuture<NewOutput>, List<CompletableFuture<NewOutput>>>
+            mapAsync(Function<Output, NewOutput> mapOp) {
+      return mapFutures(future -> future.thenApplyAsync(mapOp));
+    }
+
+    /**
+     * Transforms the result of each future via the given {@link Function}, using the specified
+     * {@link Executor}
+     *
+     * <p>This is just syntactic sugar for <code>mapFutures(f -> f.thenApplyAsync(mapOp, executor))
+     * </code>
+     *
+     * @param mapOp the mapping operation
+     * @param executor the executor to run the transforms on
+     * @param <NewOutput> The output type of the resulting futures
+     * @return A new {@link FuturesBuilder} with this operation applied at the end
+     */
+    public <NewOutput>
+        FuturesBuilder<
+                Input, NewOutput, CompletableFuture<NewOutput>, List<CompletableFuture<NewOutput>>>
+            mapAsync(Function<Output, NewOutput> mapOp, Executor executor) {
+      return mapFutures(future -> future.thenApplyAsync(mapOp, executor));
+    }
+
+    /**
+     * Transforms the result of each future via the given {@link Function}
+     *
+     * <p>This is just syntactic sugar for <code>mapFutures(f -> f.thenComposeAsync(mapOp))</code>
+     *
+     * @param mapOp the mapping operation
+     * @param <NewOutput> The output type of the resulting futures
+     * @return A new {@link FuturesBuilder} with this operation applied at the end
+     */
+    public <NewOutput>
+        FuturesBuilder<
+                Input, NewOutput, CompletableFuture<NewOutput>, List<CompletableFuture<NewOutput>>>
+            composeAsync(Function<? super Output, ? extends CompletionStage<NewOutput>> mapOp) {
+      return mapFutures(future -> future.thenComposeAsync(mapOp));
+    }
+
+    /**
+     * Transforms the result of each future via the given {@link Function}, using the specified
+     * {@link Executor}
+     *
+     * <p>This is just syntactic sugar for <code>mapFutures(f -> f.thenApplyAsync(mapOp, executor))
+     * </code>
+     *
+     * @param mapOp the mapping operation
+     * @param executor the executor to run the transforms on
+     * @param <NewOutput> The output type of the resulting futures
+     * @return A new {@link FuturesBuilder} with this operation applied at the end
+     */
+    public <NewOutput>
+        FuturesBuilder<
+                Input, NewOutput, CompletableFuture<NewOutput>, List<CompletableFuture<NewOutput>>>
+            composeAsync(
+                Function<? super Output, ? extends CompletionStage<NewOutput>> mapOp,
+                Executor executor) {
+      return mapFutures(future -> future.thenComposeAsync(mapOp, executor));
     }
   }
 }

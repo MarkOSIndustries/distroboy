@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -303,6 +305,37 @@ public class HappyPathTests {
 
           Assertions.assertEquals(expectedString, stringBuilder.toString());
           Assertions.assertEquals(ceilDiv(expectedString.length(), 10), appendCount);
+        });
+  }
+
+  @Test
+  public void canRunLocalNodeOperationsInParallel() throws Exception {
+    final var input = IntStream.range(0, 100).boxed().toList();
+    final var expectedValues = IntStream.range(-5, 95).boxed().toList();
+
+    final var executor = Executors.newCachedThreadPool();
+
+    DistroBoySingleProcess.run(
+        "InProcessDistroBoyTest.canRunLocalNodeOperationsInParallel",
+        3,
+        cluster -> {
+          final var simpleJob =
+              DistributedOpSequence.readFrom(new StaticDataSource<>(input))
+                  .asFutures()
+                  .mapFutures(f -> f.thenApply(x -> x - 1))
+                  .mapAsync(x -> x - 1)
+                  .mapAsync(x -> x - 1, executor)
+                  .composeAsync(x -> CompletableFuture.supplyAsync(() -> x - 1))
+                  .composeAsync(x -> CompletableFuture.supplyAsync(() -> x - 1, executor))
+                  .joinFuturesInBatches(2)
+                  .collect(Serialisers.integerValues);
+          cluster
+              .execute(simpleJob)
+              .onClusterLeader(
+                  actualValues -> {
+                    Assertions.assertIterableEquals(
+                        expectedValues, actualValues.stream().sorted().toList());
+                  });
         });
   }
 
