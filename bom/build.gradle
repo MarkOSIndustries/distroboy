@@ -1,0 +1,50 @@
+plugins {
+  id 'java-platform'
+  id 'maven-publish'
+  id 'signing'
+  id 'com.gradleup.nmcp'
+}
+
+dependencies {
+  constraints {
+    project.rootProject.subprojects.findAll {it != project && it.hasProperty("pom_name") }.forEach { subproject ->
+      api(subproject)
+    }
+  }
+}
+
+publishing {
+  publications {
+    bom(MavenPublication) {
+      from components.javaPlatform
+      artifactId = "distroboy-${project.name}"
+      pom {
+        name = "${pom_name}"
+        description = "${pom_description}"
+        url = 'https://github.com/MarkOSIndustries/distroboy'
+        licenses {
+          license {
+            name = 'MIT License'
+            url = 'https://github.com/MarkOSIndustries/distroboy/blob/master/LICENSE'
+          }
+        }
+        developers {
+          developer {
+            id = 'markosindustries'
+            name = 'Mark Green'
+            email = 'markosindustries@gmail.com'
+          }
+        }
+        scm {
+          connection = 'scm:git:git://github.com/MarkOSIndustries/distroboy.git'
+          url = 'https://github.com/MarkOSIndustries/distroboy'
+        }
+      }
+    }
+  }
+}
+
+signing {
+  required { !project.hasProperty("disableSigning") }
+  sign publishing.publications.bom
+}
