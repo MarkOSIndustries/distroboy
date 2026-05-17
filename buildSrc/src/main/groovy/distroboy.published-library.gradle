@@ -20,6 +20,7 @@ publishing {
   publications {
     mavenJava(MavenPublication) {
       from components.java
+      artifactId = "distroboy-${project.name}"
       versionMapping {
         usage('java-api') {
           fromResolutionOf('runtimeClasspath')
